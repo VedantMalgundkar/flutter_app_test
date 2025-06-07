@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'services/ble_service.dart';
+import 'ble_device_tile.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,11 +32,34 @@ class BleScannerPage extends StatefulWidget {
 class _BleScannerPageState extends State<BleScannerPage> {
   List<DiscoveredDevice> devices = [];
   StreamSubscription<DiscoveredDevice>? scanSubscription;
+  final bleService = BleService(flutterReactiveBle);
 
   @override
   void initState() {
     super.initState();
-    requestPermissions().then((_) => startScan());
+    requestPermissions().then((_) {
+      flutterReactiveBle.statusStream.listen((status) {
+        if (status == BleStatus.ready) {
+          startScan();
+        } else if (status == BleStatus.poweredOff) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Bluetooth is off"),
+              content: const Text(
+                "Please turn on Bluetooth to scan for devices.",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          );
+        }
+      });
+    });
   }
 
   Future<void> requestPermissions() async {
@@ -48,15 +73,18 @@ class _BleScannerPageState extends State<BleScannerPage> {
   void startScan() {
     scanSubscription = flutterReactiveBle
         .scanForDevices(withServices: [])
-        .listen((device) {
-      if (devices.indexWhere((d) => d.id == device.id) == -1) {
-        setState(() {
-          devices.add(device);
-        });
-      }
-    }, onError: (err) {
-      print("Scan failed: $err");
-    });
+        .listen(
+          (device) {
+            if (devices.indexWhere((d) => d.id == device.id) == -1) {
+              setState(() {
+                devices.add(device);
+              });
+            }
+          },
+          onError: (err) {
+            print("Scan failed: $err");
+          },
+        );
   }
 
   @override
@@ -73,10 +101,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
         itemCount: devices.length,
         itemBuilder: (context, index) {
           final d = devices[index];
-          return ListTile(
-            title: Text(d.name.isNotEmpty ? d.name : "(No name)"),
-            subtitle: Text("ID: ${d.id}  RSSI: ${d.rssi}"),
-          );
+          return BleDeviceTile(device: d, onConnect: () => _connectToDevice(d));
         },
       ),
       floatingActionButton: FloatingActionButton(
