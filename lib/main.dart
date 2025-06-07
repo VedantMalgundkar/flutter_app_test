@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'services/ble_service.dart';
 import 'ble_device_tile.dart';
+import './services/ble_service.dart';
+import './service_locator.dart';
+import 'package:get_it/get_it.dart';
 
 void main() {
+  setupLocator();
   runApp(const MyApp());
 }
 
@@ -32,7 +35,8 @@ class BleScannerPage extends StatefulWidget {
 class _BleScannerPageState extends State<BleScannerPage> {
   List<DiscoveredDevice> devices = [];
   StreamSubscription<DiscoveredDevice>? scanSubscription;
-  final bleService = BleService(flutterReactiveBle);
+  // final bleService = BleService(flutterReactiveBle);
+  final BleService bleService = GetIt.I<BleService>();
 
   @override
   void initState() {
@@ -101,7 +105,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
         itemCount: devices.length,
         itemBuilder: (context, index) {
           final d = devices[index];
-          return BleDeviceTile(device: d, onConnect: () => _connectToDevice(d));
+          return BleDeviceTile(device: d);
         },
       ),
       floatingActionButton: FloatingActionButton(

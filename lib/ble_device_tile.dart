@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:get_it/get_it.dart';
+import './services/ble_service.dart';
+import './wifi_list.dart';
 
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
-  final Future<bool> Function() onConnect;
 
-  const BleDeviceTile({Key? key, required this.device, required this.onConnect})
-    : super(key: key);
+  const BleDeviceTile({Key? key, required this.device}) : super(key: key);
 
   @override
   State<BleDeviceTile> createState() => _BleDeviceTileState();
@@ -15,16 +16,26 @@ class BleDeviceTile extends StatefulWidget {
 class _BleDeviceTileState extends State<BleDeviceTile> {
   bool isLoading = false;
   bool isConnected = false;
+  final BleService bleService = GetIt.I<BleService>();
 
   Future<void> _handleConnect() async {
     setState(() => isLoading = true);
 
-    final success = await widget.onConnect();
+    final success = await bleService.connectToDevice(widget.device);
 
     setState(() {
       isLoading = false;
       isConnected = success;
     });
+
+    if (success) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WifiListPage(deviceId: widget.device.id),
+        ),
+      );
+    }
   }
 
   @override

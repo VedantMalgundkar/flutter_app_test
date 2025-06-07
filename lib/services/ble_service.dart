@@ -56,14 +56,16 @@ class BleService {
   Future<List<Map<String, dynamic>>> discoverAndReadWifi(
     String deviceId,
   ) async {
-    final services = await _ble.discoverServices(deviceId);
     try {
-      final services = await _ble.discoverServices(deviceId);
+      await _ble.discoverAllServices(deviceId); // Triggers discovery
+      final services = await _ble.getDiscoveredServices(deviceId);
+      // final List<DiscoveredService> services = await _ble.getDiscoveredServices(deviceId);
+
       for (var service in services) {
-        if (service.serviceId == wifiServiceUuid) {
+        if (service.id == wifiServiceUuid) {
           for (var char in service.characteristics) {
-            if (char.characteristicId == scanCharUuid) {
-              return await _readWifiList(deviceId, char.characteristicId);
+            if (char.id == scanCharUuid) {
+              return await _readWifiList(deviceId, char.id);
             }
           }
         }
