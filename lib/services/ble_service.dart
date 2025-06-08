@@ -16,6 +16,7 @@ class BleService {
   final Uuid statusCharUuid = Uuid.parse(
     "00000004-710e-4a5b-8d75-3e5b444bc3cf",
   );
+  final Uuid ipCharUuid = Uuid.parse("00000005-710e-4a5b-8d75-3e5b444bc3cf");
 
   StreamSubscription<ConnectionStateUpdate>? _connectionSub;
 
@@ -166,5 +167,20 @@ class BleService {
       print("Failed to read status: $e");
       return "Error";
     }
+  }
+
+  Future<String> readIp() async {
+    if (_connectedDeviceId == null) {
+      throw Exception("Connect to device before reading IP address.");
+    }
+
+    final char = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: ipCharUuid,
+      deviceId: _connectedDeviceId!,
+    );
+
+    final result = await _ble.readCharacteristic(char);
+    return utf8.decode(result);
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get_it/get_it.dart';
 import './services/ble_service.dart';
 import './wifi_list.dart';
+import './hyperhdr_control.dart';
 
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
@@ -18,23 +19,40 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
   final BleService bleService = GetIt.I<BleService>();
   bool isConnected = false;
 
+  Future<void> _handleRedirect() async {
+    final ipaddr = await bleService.readIp();
+    print("ip is >>>>>>> $ipaddr");
+
+    final bool hasValidIp = ipaddr != null && ipaddr.trim().isNotEmpty;
+
+    final nextPage = hasValidIp
+        ? HyperHdrController()
+        : WifiListPage(deviceId: widget.device.id);
+
+    Navigator.push(context, MaterialPageRoute(builder: (context) => nextPage));
+  }
+
   Future<void> _handleConnect() async {
     setState(() => isLoading = true);
 
-    final success = await bleService.connectToDevice(widget.device);
+    try {
+      final success = await bleService.connectToDevice(widget.device);
 
-    setState(() {
-      isLoading = false;
-      isConnected = success;
-    });
+      if (!success) {
+        setState(() => isLoading = false);
+        print("Failed to connect to device.");
+        return;
+      }
 
-    if (success) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WifiListPage(deviceId: widget.device.id),
-        ),
-      );
+      setState(() {
+        isConnected = true;
+        isLoading = false;
+      });
+
+      await _handleRedirect();
+    } catch (e) {
+      setState(() => isLoading = false);
+      print("Error during connection or IP read: $e");
     }
   }
 
@@ -56,15 +74,8 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
           widget.device.name.isNotEmpty ? widget.device.name : "(No name)",
         ),
         subtitle: Text("ID: ${widget.device.id}  RSSI: ${widget.device.rssi}"),
-        onTap: () {
-          if (isSelected) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => WifiListPage(deviceId: widget.device.id),
-              ),
-            );
-          }
+        onTap: () async {
+          await _handleRedirect();
         },
         trailing: isLoading
             ? const SizedBox(
