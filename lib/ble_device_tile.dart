@@ -15,8 +15,8 @@ class BleDeviceTile extends StatefulWidget {
 
 class _BleDeviceTileState extends State<BleDeviceTile> {
   bool isLoading = false;
-  bool isConnected = false;
   final BleService bleService = GetIt.I<BleService>();
+  bool isConnected = false;
 
   Future<void> _handleConnect() async {
     setState(() => isLoading = true);
@@ -40,23 +40,53 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(
-        widget.device.name.isNotEmpty ? widget.device.name : "(No name)",
+    final isSelected = widget.device.id == bleService.connectedDeviceId;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isSelected ? Colors.green : Colors.transparent,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(12),
       ),
-      subtitle: Text("ID: ${widget.device.id}  RSSI: ${widget.device.rssi}"),
-      trailing: isLoading
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : isConnected
-          ? const Text("Connected", style: TextStyle(color: Colors.green))
-          : ElevatedButton(
-              onPressed: _handleConnect,
-              child: const Text("Connect"),
-            ),
+      child: ListTile(
+        title: Text(
+          widget.device.name.isNotEmpty ? widget.device.name : "(No name)",
+        ),
+        subtitle: Text("ID: ${widget.device.id}  RSSI: ${widget.device.rssi}"),
+        onTap: () {
+          if (isSelected) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => WifiListPage(deviceId: widget.device.id),
+              ),
+            );
+          }
+        },
+        trailing: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : isConnected || isSelected
+            ? ElevatedButton(
+                onPressed: _handleConnect,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                child: const Text("Reconnect"),
+              )
+            : ElevatedButton(
+                onPressed: _handleConnect,
+                child: const Text("Connect"),
+              ),
+      ),
     );
   }
 }

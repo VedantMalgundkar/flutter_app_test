@@ -5,6 +5,8 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 class BleService {
   final FlutterReactiveBle _ble;
   BleService(this._ble);
+  String? _connectedDeviceId;
+  String? get connectedDeviceId => _connectedDeviceId;
 
   // UUIDs from your Python BLE server
   final Uuid wifiServiceUuid = Uuid.parse(
@@ -32,12 +34,14 @@ class BleService {
 
             if (state.connectionState == DeviceConnectionState.connected) {
               print("Connected to ${device.name}  ${device.id}");
+              _connectedDeviceId = device.id;
               completer.complete(true);
             }
 
             if (state.connectionState == DeviceConnectionState.disconnected) {
               print("Disconnected from ${device.id}");
               if (!completer.isCompleted) {
+                _connectedDeviceId = null;
                 completer.complete(false);
               }
             }
@@ -45,6 +49,7 @@ class BleService {
           onError: (e) {
             print("Connection error: $e");
             if (!completer.isCompleted) {
+              _connectedDeviceId = null;
               completer.complete(false);
             }
           },

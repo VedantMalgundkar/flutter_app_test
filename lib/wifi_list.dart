@@ -106,10 +106,10 @@ class _WifiListPageState extends State<WifiListPage> {
               itemBuilder: (context, index) {
                 final wifi = wifiList[index];
                 return ListTile(
-                  title: Text(wifi["ssid"] ?? "Unknown SSID"),
-                  subtitle: Text("Signal: ${wifi["signal"]}"),
+                  title: Text(wifi["s"] ?? "Unknown SSID"),
+                  subtitle: Text("Signal: ${wifi["sr"]}"),
                   onTap: () {
-                    _showPasswordDialog(wifi["ssid"]);
+                    _showPasswordDialog(wifi["s"]);
                   },
                 );
               },
