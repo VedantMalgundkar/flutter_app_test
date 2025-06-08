@@ -16,6 +16,60 @@ class _WifiListPageState extends State<WifiListPage> {
   List<Map<String, dynamic>> wifiList = [];
   bool isLoading = false;
 
+  void _showPasswordDialog(String ssid) {
+    final TextEditingController _passwordController = TextEditingController();
+    bool _obscureText = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Connect to $ssid"),
+              content: TextField(
+                controller: _passwordController,
+                obscureText: _obscureText,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                  },
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final password = _passwordController.text;
+                    Navigator.of(context).pop(); // Close dialog
+
+                    print("SSID: $ssid, Password: $password");
+                    // TODO: Use password + ssid
+                  },
+                  child: const Text("Connect"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +108,9 @@ class _WifiListPageState extends State<WifiListPage> {
                 return ListTile(
                   title: Text(wifi["ssid"] ?? "Unknown SSID"),
                   subtitle: Text("Signal: ${wifi["signal"]}"),
+                  onTap: () {
+                    _showPasswordDialog(wifi["ssid"]);
+                  },
                 );
               },
             ),
