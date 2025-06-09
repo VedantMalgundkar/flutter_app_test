@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import './services/ble_service.dart';
 
-class WifiListPage extends StatefulWidget {
+class WifiListWidget extends StatefulWidget {
   final String deviceId;
 
-  const WifiListPage({super.key, required this.deviceId});
+  const WifiListWidget({super.key, required this.deviceId});
 
   @override
-  State<WifiListPage> createState() => _WifiListPageState();
+  State<WifiListWidget> createState() => _WifiListWidgetState();
 }
 
-class _WifiListPageState extends State<WifiListPage> {
+class _WifiListWidgetState extends State<WifiListWidget> {
   final BleService bleService = GetIt.I<BleService>();
   List<Map<String, dynamic>> wifiList = [];
   bool isLoading = false;
@@ -48,15 +48,14 @@ class _WifiListPageState extends State<WifiListPage> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop();
                   },
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     final password = _passwordController.text;
-                    Navigator.of(context).pop(); // Close dialog
-
+                    Navigator.of(context).pop();
                     print("SSID: $ssid, Password: $password");
                     // TODO: Use password + ssid
                   },
@@ -89,31 +88,21 @@ class _WifiListPageState extends State<WifiListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Wi-Fi Networks"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadWifiList, // 🔁 Refresh Wi-Fi list
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadWifiList,
+      child: ListView.builder(
+        itemCount: wifiList.length,
+        itemBuilder: (context, index) {
+          final wifi = wifiList[index];
+          return ListTile(
+            title: Text(wifi["s"] ?? "Unknown SSID"),
+            subtitle: Text("Signal: ${wifi["sr"]}"),
+            onTap: () {
+              _showPasswordDialog(wifi["s"]);
+            },
+          );
+        },
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: wifiList.length,
-              itemBuilder: (context, index) {
-                final wifi = wifiList[index];
-                return ListTile(
-                  title: Text(wifi["s"] ?? "Unknown SSID"),
-                  subtitle: Text("Signal: ${wifi["sr"]}"),
-                  onTap: () {
-                    _showPasswordDialog(wifi["s"]);
-                  },
-                );
-              },
-            ),
     );
   }
 }

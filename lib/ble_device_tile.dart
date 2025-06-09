@@ -27,7 +27,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
 
     final nextPage = hasValidIp
         ? HyperHdrController()
-        : WifiListPage(deviceId: widget.device.id);
+        : WifiListWidget(deviceId: widget.device.id);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) => nextPage));
   }
