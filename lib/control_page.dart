@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import './services/ble_service.dart';
@@ -12,51 +13,76 @@ class ControlPage extends StatefulWidget {
 
 class _ControlPageState extends State<ControlPage> {
   final BleService bleService = GetIt.I<BleService>();
-  String? base_url;
+  final baseUrl = "http://192.168.0.111:5000";
 
   @override
   void initState() {
     super.initState();
-    _loadIp();
+    // fetchHyperHdrStatus();
+    // commonReqFunc('/hyperhdr/current-version', "GET");
+    commonReqFunc('/status-hyperhdr', "GET");
+    // commonReqFunc('/start-hyperhdr', "POST");
+    // commonReqFunc('/stop-hyperhdr', "POST");
+    // commonReqFunc('/hyperhdr/install-hyperhdr', "POST", {
+    //   "url":
+    //       "https://github.com/awawa-dev/HyperHDR/releases/download/v21.0.0.0/HyperHDR-21.0.0.0.bookworm-aarch64.deb",
+    // });
   }
 
-  Future<void> _loadIp() async {
-    final ip = await bleService.readIp();
-    if (ip != null && ip.trim().isNotEmpty) {
-      print(ip);
-      final baseUrl = "http://$ip:5000";
-      final statusRoute = "/status-hyperhdr";
-      final fullUrl = Uri.parse("$baseUrl$statusRoute");
+  Future<void> commonReqFunc(
+    String path,
+    String method, [
+    Map<String, dynamic>? body,
+  ]) async {
+    final fullUrl = Uri.parse("$baseUrl$path");
+    http.Response response;
 
-      try {
-        final response = await http.get(fullUrl);
+    try {
+      final headers = {'Content-Type': 'application/json'};
 
-        if (response.statusCode == 200) {
-          print("Success: ${response.body}");
-        } else {
-          print("Failed: ${response.statusCode}");
-        }
-
-        setState(() {
-          base_url = baseUrl;
-        });
-      } catch (e) {
-        print("Error: $e");
+      switch (method.toUpperCase()) {
+        case "GET":
+          response = await http.get(fullUrl, headers: headers);
+          break;
+        case "POST":
+          response = await http.post(
+            fullUrl,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
+        case "PUT":
+          response = await http.put(
+            fullUrl,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
+        case "DELETE":
+          response = await http.delete(
+            fullUrl,
+            headers: headers,
+            body: jsonEncode(body),
+          );
+          break;
+        default:
+          throw Exception("Unsupported HTTP method: $method");
       }
-    }
 
-    setState(() {
-      base_url = ip;
-    });
+      if (response.statusCode == 200) {
+        print("Success $path : ${response.body}");
+      } else {
+        print("Failed $path : ${response.statusCode} ${response.body}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(
-        base_url != null ? "IP: $base_url" : "Loading IP...",
-        style: const TextStyle(fontSize: 24),
-      ),
+      child: Text("HIIIIIIIII", style: const TextStyle(fontSize: 24)),
     );
   }
 }

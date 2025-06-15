@@ -22,10 +22,11 @@ class _HyperHdrControllerState extends State<HyperHdrController> {
     final deviceId = bleService.connectedDeviceId;
     pages = [
       ControlPage(),
-      if (deviceId != null)
-        WifiListWidget(deviceId: deviceId)
-      else
-        const Center(child: Text("No device connected")),
+      // if (deviceId != null)
+      //   WifiListWidget(deviceId: deviceId)
+      // else
+      //   const Center(child: Text("No device connected")),
+      Center(child: Text("Setting Page", style: const TextStyle(fontSize: 24))),
     ];
   }
 
