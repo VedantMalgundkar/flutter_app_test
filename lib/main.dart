@@ -4,7 +4,7 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'ble_device_tile.dart';
 import './services/ble_service.dart';
-import './service_locator.dart';
+import 'services/service_locator.dart';
 import 'package:get_it/get_it.dart';
 
 void main() {
