@@ -11,19 +11,54 @@ class HyperhdrToggle extends StatefulWidget {
   State<HyperhdrToggle> createState() => _HyperhdrToggleState();
 }
 
-class _HyperhdrToggleState extends State<HyperhdrToggle> {
+class _HyperhdrToggleState extends State<HyperhdrToggle>
+    with SingleTickerProviderStateMixin {
   final HyperhdrService _hyperhdr = GetIt.I<HyperhdrService>();
+
   bool _isRunning = false;
   bool _isFetching = true;
   bool _isToggling = false;
-  Timer? _pollingTimer;
   bool _isPollingActive = false;
+  bool _isDrawerOpen = false;
+
+  Timer? _pollingTimer;
+
+  late AnimationController _drawerController;
+  late Animation<Offset> _drawerAnimation;
 
   @override
   void initState() {
     super.initState();
-    _fetchStatus();
-    _startPolling();
+
+    _drawerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _drawerAnimation =
+        Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
+          CurvedAnimation(parent: _drawerController, curve: Curves.easeInOut),
+        );
+  }
+
+  void _toggleDrawer() {
+    setState(() => _isDrawerOpen = !_isDrawerOpen);
+    if (_isDrawerOpen) {
+      _drawerController.forward();
+      _fetchStatus();
+      _startPolling();
+    } else {
+      _drawerController.reverse();
+      _stopPolling();
+    }
+  }
+
+  void _closeDrawer() {
+    if (_isDrawerOpen) {
+      setState(() {
+        _isDrawerOpen = false;
+      });
+    }
   }
 
   void _startPolling() {
@@ -33,6 +68,10 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
         _fetchStatusWithPollingLock();
       }
     });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
   }
 
   Future<void> _fetchStatusWithPollingLock() async {
@@ -65,25 +104,21 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
   }
 
   Future<void> _toggleStatus(bool value) async {
-    // Stop polling during toggle
-    _pollingTimer?.cancel();
+    _stopPolling();
 
     setState(() {
       _isToggling = true;
-      _isRunning = value; // optimistically toggle
+      _isRunning = value;
     });
 
     try {
       final res = value ? await _hyperhdr.start() : await _hyperhdr.stop();
-
-      // Debug: Print the response
       print('Toggle response: $res');
 
       if (res == null) {
         throw Exception('No response from service');
       }
 
-      // Check different possible response formats
       bool success = false;
       String? message;
 
@@ -94,14 +129,12 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
             res['result'] == 'success';
         message = res['message'] ?? res['msg'] ?? 'Operation completed';
       } else {
-        // If response is not a map, consider it successful if no exception was thrown
         success = true;
         message = 'Operation completed';
       }
 
       if (success) {
         _showMessage(message!, color: Colors.green);
-        // Verify the actual status after toggle
         await Future.delayed(const Duration(milliseconds: 500));
         await _fetchStatus();
       } else {
@@ -110,7 +143,6 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
     } catch (e) {
       print('Toggle error: $e');
       _showMessage("Toggle failed: ${e.toString()}");
-      // revert toggle if it failed
       if (mounted) {
         setState(() => _isRunning = !value);
       }
@@ -118,7 +150,6 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
       if (mounted) {
         setState(() => _isToggling = false);
       }
-      // Restart polling
       _startPolling();
     }
   }
@@ -137,46 +168,99 @@ class _HyperhdrToggleState extends State<HyperhdrToggle> {
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _drawerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isFetching) {
-      return const CircularProgressIndicator();
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Stack(
       children: [
-        const Text("HyperHDR"),
-        const SizedBox(width: 10),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Opacity(
-              opacity: _isToggling ? 0.3 : 1,
-              child: Switch(
-                value: _isRunning,
-                onChanged: _isToggling ? null : _toggleStatus,
-                activeColor: Colors.green,
-                inactiveThumbColor: Colors.grey,
+        // 1. Tap outside to close
+        if (_isDrawerOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _closeDrawer,
+              behavior: HitTestBehavior.translucent,
+              child: Container(),
+            ),
+          ),
+
+        // 2. Drawer with internal Stack
+        AnimatedSlide(
+          offset: _isDrawerOpen ? Offset.zero : const Offset(0, -1),
+          duration: const Duration(milliseconds: 300),
+          child: Material(
+            elevation: 4,
+            color: Colors.white,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(_isRunning ? "Stop HyperHDR" : "Start HyperHDR"),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 10,
+                            ),
+                            child: Switch(
+                              value: _isRunning,
+                              onChanged: _isToggling ? null : _toggleStatus,
+                              activeColor: Colors.green,
+                              inactiveThumbColor: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Icon anchored at bottom of drawer
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: _toggleDrawer,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(Icons.keyboard_arrow_up, size: 32),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. Toggle icon (only shown when drawer is closed)
+        if (!_isDrawerOpen)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _toggleDrawer,
+                child: Container(
+                  // padding: const EdgeInsets.all(8),
+                  child: Icon(Icons.keyboard_arrow_down, size: 32),
+                ),
               ),
             ),
-            if (_isToggling)
-              const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-        ),
-        const SizedBox(width: 10),
-        Icon(
-          Icons.circle,
-          size: 14,
-          color: _isRunning ? Colors.green : Colors.red,
-        ),
+          ),
       ],
     );
   }
