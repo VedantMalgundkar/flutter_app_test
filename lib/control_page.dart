@@ -8,10 +8,10 @@ class ControlPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: const [
-        HyperhdrToggle(),
-        Expanded(child: WebViewContainer()),
+        Positioned.fill(child: WebViewContainer()),
+        Positioned(top: 0, left: 0, right: 0, child: HyperhdrToggle()),
       ],
     );
   }

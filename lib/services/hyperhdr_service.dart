@@ -66,12 +66,28 @@ class HyperhdrService {
     return await _request('/stop-hyperhdr', 'POST');
   }
 
-  Future<bool> install(String url) async {
+  Future<Map<String, dynamic>?> getVersion() async {
+    return await _request('/hyperhdr/current-version', 'GET');
+  }
+
+  Future<List<Map<String, dynamic>>> getAvlVersions() async {
+    final response = await _request('/hyperhdr/avl-versions', 'GET');
+
+    final versions = response?['versions'];
+
+    if (versions is List) {
+      return versions.map((v) => Map<String, dynamic>.from(v)).toList();
+    } else {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> install(String url) async {
     final res = await _request(
       '/hyperhdr/install-hyperhdr',
       'POST',
       body: {'url': url},
     );
-    return res != null;
+    return res;
   }
 }

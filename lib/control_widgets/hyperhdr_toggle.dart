@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../services/hyperhdr_service.dart';
+import '../version_info/version_info.dart';
 
 class HyperhdrToggle extends StatefulWidget {
   const HyperhdrToggle({super.key});
@@ -20,6 +21,7 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
   bool _isToggling = false;
   bool _isPollingActive = false;
   bool _isDrawerOpen = false;
+  String _version = '';
 
   Timer? _pollingTimer;
 
@@ -47,6 +49,7 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
       _drawerController.forward();
       _fetchStatus();
       _startPolling();
+      _fetchVersion();
     } else {
       _drawerController.reverse();
       _stopPolling();
@@ -100,6 +103,20 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
       if (!mounted) return;
       _showMessage("Status check failed: ${e.toString()}");
       setState(() => _isFetching = false);
+    }
+  }
+
+  Future<void> _fetchVersion() async {
+    try {
+      final versionInfo = await _hyperhdr.getVersion();
+      if (!mounted) return;
+      setState(() {
+        _version = versionInfo?['version'] ?? "---";
+      });
+    } catch (e) {
+      setState(() {
+        _version = '---';
+      });
     }
   }
 
@@ -203,29 +220,68 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_isRunning ? "Stop HyperHDR" : "Start HyperHDR"),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 10,
+                      // Row 1
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _isRunning ? "Stop HyperHDR" : "Start HyperHDR",
                             ),
-                            child: Switch(
-                              value: _isRunning,
-                              onChanged: _isToggling ? null : _toggleStatus,
-                              activeColor: Colors.green,
-                              inactiveThumbColor: Colors.grey,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 10,
+                              ),
+                              child: Switch(
+                                value: _isRunning,
+                                onChanged: _isToggling ? null : _toggleStatus,
+                                activeColor: Colors.green,
+                                inactiveThumbColor: Colors.grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Text("Version"),
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const VersionInfoPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 10,
+                              ),
+                              child: Text(_version),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                // Icon anchored at bottom of drawer
+                // Bottom toggle icon
                 Positioned(
                   bottom: 0,
                   left: 0,
