@@ -4,8 +4,13 @@ import '../services/hyperhdr_service.dart';
 
 class VersionTile extends StatefulWidget {
   final Map<String, dynamic> version;
+  final Future<void> Function() onInstallationComplete;
 
-  const VersionTile({super.key, required this.version});
+  const VersionTile({
+    super.key,
+    required this.version,
+    required this.onInstallationComplete,
+  });
 
   @override
   State<VersionTile> createState() => _VersionTileState();
@@ -14,16 +19,6 @@ class VersionTile extends StatefulWidget {
 class _VersionTileState extends State<VersionTile> {
   final HyperhdrService _hyperhdr = GetIt.I<HyperhdrService>();
   bool isInstalling = false;
-
-  // Future<void> _handleInstall(url) async {
-  //   print("url $url");
-  //   setState(() => isInstalling = true);
-  //   try {
-  //     await Future.delayed(const Duration(seconds: 4));
-  //   } finally {
-  //     if (mounted) setState(() => isInstalling = false);
-  //   }
-  // }
 
   Future<void> _handleInstall(String url) async {
     try {
@@ -40,6 +35,7 @@ class _VersionTileState extends State<VersionTile> {
           content: Text(response?["message"] ?? "Installation successful"),
         ),
       );
+      widget.onInstallationComplete();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -58,6 +54,7 @@ class _VersionTileState extends State<VersionTile> {
   Widget build(BuildContext context) {
     final version = widget.version;
     final versionName = version["version"];
+    final isAlreadyInstalled = version["is_installed"] == true;
     final assetName = version["assets"]?[0]?["name"] ?? "";
     final downloadUrl = version["assets"]?[0]?["browser_download_url"];
 
@@ -68,7 +65,9 @@ class _VersionTileState extends State<VersionTile> {
         width: 100,
         height: 36,
         child: ElevatedButton(
-          onPressed: isInstalling ? null : () => _handleInstall(downloadUrl),
+          onPressed: (isInstalling || isAlreadyInstalled)
+              ? null
+              : () => _handleInstall(downloadUrl),
           child: isInstalling
               ? const SizedBox(
                   width: 16,
@@ -78,7 +77,14 @@ class _VersionTileState extends State<VersionTile> {
                     color: Colors.white,
                   ),
                 )
-              : const Text("Install"),
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    isAlreadyInstalled ? "Installed" : "Install",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
         ),
       ),
     );

@@ -28,7 +28,6 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
         isLoading = true;
       });
       final versions = await _hyperhdr.getAvlVersions();
-      print("versions $versions");
       if (!mounted) return;
       setState(() {
         versionList = versions;
@@ -61,7 +60,10 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
           itemCount: versionList.length,
           itemBuilder: (context, index) {
             final version = versionList[index];
-            return VersionTile(version: version);
+            return VersionTile(
+              version: version,
+              onInstallationComplete: _loadVersionList,
+            );
           },
         ),
       ),
