@@ -13,9 +13,9 @@ void setupLocator() {
     () => BleService(getIt<FlutterReactiveBle>()),
   );
 
-  getIt.registerLazySingleton<HttpService>(
-    () => HttpService(baseUrl: "http://192.168.0.111:5000"), // <-- Set base URL
-  );
+  // getIt.registerLazySingleton<HttpService>(
+  //   () => HttpService(baseUrl: "http://192.168.0.111:5000"), // <-- Set base URL
+  // );
 
   getIt.registerLazySingleton<HyperhdrDiscoveryService>(
     () => HyperhdrDiscoveryService(),

@@ -17,10 +17,8 @@ class HyperhdrDiscoveryService {
           ResourceRecordQuery.addressIPv4(srv.target),
         )) {
           final uri = Uri.parse("http://${ip.address.address}:${srv.port}");
-          print("🔍 Found PTR: ${ptr.domainName}");
-          print("🔍 Found SRV: ${srv.target}:${srv.port}");
-          print("🔍 Found IP: ${ip.address.address}");
-          servers.add({"label": srv.target, "url": uri});
+          final hypUri = Uri.parse("http://${ip.address.address}:8090");
+          servers.add({"label": srv.target, "url": uri, "hyperUrl": hypUri});
         }
       }
     }

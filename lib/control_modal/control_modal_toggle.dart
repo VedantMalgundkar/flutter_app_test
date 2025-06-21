@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/http_service.dart';
 import '../version_info/version_info.dart';
+import 'package:provider/provider.dart';
+import '../services/http_service_provider.dart';
 
 class ControlModalToggle extends StatefulWidget {
-  final Uri url;
-  const ControlModalToggle({super.key, required this.url});
+  const ControlModalToggle({super.key});
 
   @override
   State<ControlModalToggle> createState() => _ControlModalToggleState();
@@ -31,7 +32,7 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   @override
   void initState() {
     super.initState();
-    _hyperhdr = HttpService(baseUrl: widget.url.toString());
+    _hyperhdr = context.read<HttpServiceProvider>().service;
     _drawerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -260,8 +261,7 @@ class _ControlModalToggleState extends State<ControlModalToggle>
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) =>
-                                            VersionInfoPage(url: widget.url),
+                                        builder: (context) => VersionInfoPage(),
                                       ),
                                     );
                                   },

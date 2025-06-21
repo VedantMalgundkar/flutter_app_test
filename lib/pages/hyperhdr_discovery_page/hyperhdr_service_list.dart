@@ -60,12 +60,12 @@ class _HyperhdrServiceListState extends State<HyperhdrServiceList> {
           : ListView.builder(
               itemCount: servers!.length,
               itemBuilder: (context, index) {
-                final label = servers![index]["label"];
-                // final uri = servers![index]["url"];
+                final device = servers![index];
+                final label = device["label"];
                 return ListTile(
                   title: Text(label),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => widget.onSelect?.call(servers![index]),
+                  onTap: () => widget.onSelect?.call(device),
                 );
               },
             ),

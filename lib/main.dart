@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'services/service_locator.dart';
+import 'package:provider/provider.dart';
+import './services/http_service_provider.dart';
 import './pages/hyperhdr_discovery_page/hyperhdr_discovery_page.dart';
 
 void main() {
   setupLocator();
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => HttpServiceProvider())],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

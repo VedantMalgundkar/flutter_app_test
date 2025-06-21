@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../ble_scanner_page/ble_scanner_page.dart';
 import './hyperhdr_service_list.dart';
 import '../control_page/control_page.dart';
+import 'package:provider/provider.dart';
+import '../../services/http_service_provider.dart';
 
 class HyperhdrDiscoveryPage extends StatelessWidget {
   const HyperhdrDiscoveryPage({super.key});
@@ -25,11 +27,16 @@ class HyperhdrDiscoveryPage extends StatelessWidget {
         ],
       ),
       body: HyperhdrServiceList(
-        onSelect: (selected) {
-          final url = selected['url'] as Uri;
+        onSelect: (selectedDevice) {
+          final url = selectedDevice['url'] as Uri;
+          final hyperUrl = selectedDevice['hyperUrl'] as Uri;
+
+          context.read<HttpServiceProvider>().updateBaseUrl(url);
+          context.read<HttpServiceProvider>().updateHyperUri(hyperUrl);
+
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => ControlPage(url: url)),
+            MaterialPageRoute(builder: (_) => ControlPage()),
           );
         },
       ),

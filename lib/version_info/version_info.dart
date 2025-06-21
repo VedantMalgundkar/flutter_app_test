@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/http_service.dart';
 import './version_tile.dart';
+import 'package:provider/provider.dart';
+import '../services/http_service_provider.dart';
 
 class VersionInfoPage extends StatefulWidget {
-  final Uri url;
-  const VersionInfoPage({super.key, required this.url});
+  const VersionInfoPage({super.key});
 
   @override
   State<VersionInfoPage> createState() => _VersionInfoPageState();
@@ -18,7 +19,7 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
   @override
   void initState() {
     super.initState();
-    _hyperhdr = HttpService(baseUrl: widget.url.toString());
+    _hyperhdr = context.read<HttpServiceProvider>().service;
     _loadVersionList();
   }
 
@@ -64,7 +65,6 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
             return VersionTile(
               version: version,
               onInstallationComplete: _loadVersionList,
-              url: widget.url,
             );
           },
         ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/http_service.dart';
+import 'package:provider/provider.dart';
+import '../services/http_service_provider.dart';
 
 class VersionTile extends StatefulWidget {
-  final Uri url;
   final Map<String, dynamic> version;
   final Future<void> Function() onInstallationComplete;
 
@@ -10,7 +11,6 @@ class VersionTile extends StatefulWidget {
     super.key,
     required this.version,
     required this.onInstallationComplete,
-    required this.url,
   });
 
   @override
@@ -24,7 +24,7 @@ class _VersionTileState extends State<VersionTile> {
   @override
   void initState() {
     super.initState();
-    _hyperhdr = HttpService(baseUrl: widget.url.toString());
+    _hyperhdr = context.read<HttpServiceProvider>().service;
   }
 
   Future<void> _handleInstall(String url) async {
