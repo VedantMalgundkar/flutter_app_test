@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../services/hyperhdr_service.dart';
 import '../version_info/version_info.dart';
+import './scan_service.dart';
 
 class HyperhdrToggle extends StatefulWidget {
   const HyperhdrToggle({super.key});
@@ -260,7 +261,8 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const VersionInfoPage(),
+                                            // const VersionInfoPage(),
+                                            const ScanServicePage(),
                                       ),
                                     );
                                   },
