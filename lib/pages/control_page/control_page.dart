@@ -1,24 +1,105 @@
 import 'package:flutter/material.dart';
-import './control_widgets/hyperhdr_toggle.dart';
+import '../../control_modal/control_modal_toggle.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import '../../services/http_service.dart';
 
-class ControlPage extends StatelessWidget {
-  const ControlPage({super.key});
+class ControlPage extends StatefulWidget {
+  final Uri url;
+
+  const ControlPage({super.key, required this.url});
+
+  @override
+  State<ControlPage> createState() => _ControlPageState();
+}
+
+class _ControlPageState extends State<ControlPage> {
+  late final HttpService _hyperhdr;
+  String _ssid = "---"; // default fallback
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hyperhdr = HttpService(baseUrl: widget.url.toString());
+    _getConnectedWifi();
+  }
+
+  Future<void> _getConnectedWifi() async {
+    setState(() => isLoading = true);
+
+    try {
+      final result = await _hyperhdr.getConnectedWifi();
+      final network = result?["network"];
+      if (mounted) {
+        setState(() {
+          _ssid = network?["ssid"] ?? "---";
+        });
+      }
+    } catch (e) {
+      debugPrint("⚠️ Failed to fetch connected Wi-Fi: $e");
+      setState(() => _ssid = "---");
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: const [
-        Positioned.fill(child: WebViewContainer()),
-        Positioned(top: 0, left: 0, right: 0, child: HyperhdrToggle()),
-      ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "HyperHDR Control",
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600, // Optional
+          ),
+        ),
+        backgroundColor: Colors.blue,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.wifi),
+                const SizedBox(height: 1),
+                SizedBox(
+                  width: 60,
+                  child: Center(
+                    child: Text(
+                      _ssid,
+                      style: const TextStyle(fontSize: 8),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(child: WebViewContainer(url: widget.url)),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ControlModalToggle(url: widget.url),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class WebViewContainer extends StatefulWidget {
-  const WebViewContainer({super.key});
+  final Uri url;
+  const WebViewContainer({super.key, required this.url});
 
   @override
   State<WebViewContainer> createState() => _WebViewContainerState();

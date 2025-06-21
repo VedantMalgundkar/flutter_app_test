@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class HyperhdrService {
+class HttpService {
   final String baseUrl;
 
-  HyperhdrService({required this.baseUrl});
+  HttpService({required this.baseUrl});
 
   Future<Map<String, dynamic>?> _request(
     String path,
@@ -82,7 +82,12 @@ class HyperhdrService {
     }
   }
 
+  Future<Map<String, dynamic>?> getConnectedWifi() async {
+    return await _request('/get-connected-wifi', 'GET');
+  }
+
   Future<Map<String, dynamic>?> install(String url) async {
+    print("base url ${this.baseUrl}");
     final res = await _request(
       '/hyperhdr/install-hyperhdr',
       'POST',

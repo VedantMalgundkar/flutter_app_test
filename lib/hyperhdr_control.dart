@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import './wifi_list.dart';
 import 'package:get_it/get_it.dart';
 import './services/ble_service.dart';
-import './control_page.dart';
+import 'pages/control_page/control_page.dart';
 
 class HyperHdrController extends StatefulWidget {
   const HyperHdrController({super.key});
@@ -21,7 +21,7 @@ class _HyperHdrControllerState extends State<HyperHdrController> {
     super.initState();
     final deviceId = bleService.connectedDeviceId;
     pages = [
-      ControlPage(),
+      // ControlPage(),
       // if (deviceId != null)
       //   WifiListWidget(deviceId: deviceId)
       // else

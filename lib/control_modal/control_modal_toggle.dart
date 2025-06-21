@@ -1,21 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import '../services/hyperhdr_service.dart';
+import '../services/http_service.dart';
 import '../version_info/version_info.dart';
-import './scan_service.dart';
 
-class HyperhdrToggle extends StatefulWidget {
-  const HyperhdrToggle({super.key});
+class ControlModalToggle extends StatefulWidget {
+  final Uri url;
+  const ControlModalToggle({super.key, required this.url});
 
   @override
-  State<HyperhdrToggle> createState() => _HyperhdrToggleState();
+  State<ControlModalToggle> createState() => _ControlModalToggleState();
 }
 
-class _HyperhdrToggleState extends State<HyperhdrToggle>
+class _ControlModalToggleState extends State<ControlModalToggle>
     with SingleTickerProviderStateMixin {
-  final HyperhdrService _hyperhdr = GetIt.I<HyperhdrService>();
+  late final HttpService _hyperhdr;
 
   bool _isRunning = false;
   bool _isFetching = true;
@@ -32,7 +31,7 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
   @override
   void initState() {
     super.initState();
-
+    _hyperhdr = HttpService(baseUrl: widget.url.toString());
     _drawerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -257,12 +256,12 @@ class _HyperhdrToggleState extends State<HyperhdrToggle>
                                 IconButton(
                                   icon: const Icon(Icons.info_outline),
                                   onPressed: () {
+                                    _toggleDrawer();
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            // const VersionInfoPage(),
-                                            const ScanServicePage(),
+                                            VersionInfoPage(url: widget.url),
                                       ),
                                     );
                                   },

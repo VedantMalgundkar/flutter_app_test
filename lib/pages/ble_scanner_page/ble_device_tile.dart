@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get_it/get_it.dart';
-import './services/ble_service.dart';
-import './wifi_list.dart';
-import './hyperhdr_control.dart';
+import '../../services/ble_service.dart';
+import '../../wifi_list.dart';
+import '../../hyperhdr_control.dart';
 
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;

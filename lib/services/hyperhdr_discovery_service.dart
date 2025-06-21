@@ -1,9 +1,9 @@
 import 'package:multicast_dns/multicast_dns.dart';
 
 class HyperhdrDiscoveryService {
-  Future<List<Uri>> discover() async {
+  Future<List<Map<String, dynamic>>> discover() async {
     final mdns = MDnsClient();
-    final List<Uri> servers = [];
+    final List<Map<String, dynamic>> servers = [];
 
     await mdns.start();
 
@@ -17,7 +17,10 @@ class HyperhdrDiscoveryService {
           ResourceRecordQuery.addressIPv4(srv.target),
         )) {
           final uri = Uri.parse("http://${ip.address.address}:${srv.port}");
-          servers.add(uri);
+          print("🔍 Found PTR: ${ptr.domainName}");
+          print("🔍 Found SRV: ${srv.target}:${srv.port}");
+          print("🔍 Found IP: ${ip.address.address}");
+          servers.add({"label": srv.target, "url": uri});
         }
       }
     }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import '../services/hyperhdr_service.dart';
+import '../services/http_service.dart';
 import './version_tile.dart';
 
 class VersionInfoPage extends StatefulWidget {
-  const VersionInfoPage({super.key});
+  final Uri url;
+  const VersionInfoPage({super.key, required this.url});
 
   @override
   State<VersionInfoPage> createState() => _VersionInfoPageState();
@@ -13,11 +13,12 @@ class VersionInfoPage extends StatefulWidget {
 class _VersionInfoPageState extends State<VersionInfoPage> {
   bool isLoading = false;
   List<Map<String, dynamic>> versionList = [];
-  final HyperhdrService _hyperhdr = GetIt.I<HyperhdrService>();
+  late final HttpService _hyperhdr;
 
   @override
   void initState() {
     super.initState();
+    _hyperhdr = HttpService(baseUrl: widget.url.toString());
     _loadVersionList();
   }
 
@@ -63,6 +64,7 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
             return VersionTile(
               version: version,
               onInstallationComplete: _loadVersionList,
+              url: widget.url,
             );
           },
         ),

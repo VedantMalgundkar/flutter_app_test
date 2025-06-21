@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import '../services/hyperhdr_service.dart';
+import '../services/http_service.dart';
 
 class VersionTile extends StatefulWidget {
+  final Uri url;
   final Map<String, dynamic> version;
   final Future<void> Function() onInstallationComplete;
 
@@ -10,6 +10,7 @@ class VersionTile extends StatefulWidget {
     super.key,
     required this.version,
     required this.onInstallationComplete,
+    required this.url,
   });
 
   @override
@@ -17,8 +18,14 @@ class VersionTile extends StatefulWidget {
 }
 
 class _VersionTileState extends State<VersionTile> {
-  final HyperhdrService _hyperhdr = GetIt.I<HyperhdrService>();
+  late final HttpService _hyperhdr;
   bool isInstalling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hyperhdr = HttpService(baseUrl: widget.url.toString());
+  }
 
   Future<void> _handleInstall(String url) async {
     try {
