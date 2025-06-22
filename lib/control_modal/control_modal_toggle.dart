@@ -281,43 +281,33 @@ class _ControlModalToggleState extends State<ControlModalToggle>
                     ],
                   ),
                 ),
-
-                // Bottom toggle icon
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _toggleDrawer,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(Icons.keyboard_arrow_up, size: 32),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
         ),
 
         // 3. Toggle icon (only shown when drawer is closed)
-        if (!_isDrawerOpen)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: _toggleDrawer,
-                child: Container(
-                  // padding: const EdgeInsets.all(8),
-                  child: Icon(Icons.keyboard_arrow_down, size: 32),
+        // if (!_isDrawerOpen)
+        Positioned(
+          top: !_isDrawerOpen ? 0 : null,
+          left: 0,
+          right: 0,
+          bottom: _isDrawerOpen ? -6 : null,
+          child: Center(
+            child: GestureDetector(
+              onTap: _toggleDrawer,
+              child: Container(
+                // padding: const EdgeInsets.all(8),
+                child: Icon(
+                  !_isDrawerOpen
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_up,
+                  size: 32,
                 ),
               ),
             ),
           ),
+        ),
       ],
     );
   }

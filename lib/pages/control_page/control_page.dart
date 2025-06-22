@@ -213,6 +213,7 @@ class WebViewContainer extends StatefulWidget {
 class _WebViewContainerState extends State<WebViewContainer> {
   WebViewController? _controller;
   bool _hasError = false;
+  bool _isDesktopMode = false;
 
   Future<void> _setupWebView(Uri uri) async {
     try {
@@ -224,14 +225,7 @@ class _WebViewContainerState extends State<WebViewContainer> {
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (_) => setState(() => _hasError = false),
-            onPageFinished: (_) {
-              controller.runJavaScript('''
-              document.querySelector('meta[name="viewport"]')?.setAttribute(
-                'content', 
-                'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
-              );
-            ''');
-            },
+            onPageFinished: (_) => _injectViewport(controller),
             onWebResourceError: (_) => setState(() => _hasError = true),
           ),
         );
@@ -248,6 +242,26 @@ class _WebViewContainerState extends State<WebViewContainer> {
       debugPrint("WebView setup error: $e");
       setState(() => _hasError = true);
     }
+  }
+
+  void _injectViewport(WebViewController controller) {
+    final content = _isDesktopMode
+        ? 'width=1024' // Desktop-like width
+        : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+
+    controller.runJavaScript('''
+    (() => {
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (meta) {
+        meta.setAttribute('content', '$content');
+      } else {
+        meta = document.createElement('meta');
+        meta.name = "viewport";
+        meta.content = "$content";
+        document.head.appendChild(meta);
+      }
+    })();
+  ''');
   }
 
   @override
@@ -271,7 +285,27 @@ class _WebViewContainerState extends State<WebViewContainer> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return WebViewWidget(controller: _controller!);
+    return Stack(
+      children: [
+        WebViewWidget(controller: _controller!),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            onPressed: () {
+              setState(() => _isDesktopMode = !_isDesktopMode);
+              _injectViewport(_controller!);
+            },
+            child: Icon(
+              _isDesktopMode ? Icons.phone_android : Icons.desktop_windows,
+            ),
+            tooltip: _isDesktopMode
+                ? 'Switch to Phone Mode'
+                : 'Switch to Desktop Mode',
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildError() {
