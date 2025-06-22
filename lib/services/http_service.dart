@@ -58,12 +58,25 @@ class HttpService {
     return res?['hyperhdr_status'] == 'active';
   }
 
+  Future<bool> isBootEnbled() async {
+    final res = await _request('/boot-status-hyperhdr', 'GET');
+    return res?['is_enabled_on_boot'];
+  }
+
   Future<Map<String, dynamic>?> start() async {
     return await _request('/start-hyperhdr', 'POST');
   }
 
+  Future<Map<String, dynamic>?> enableOnBoot() async {
+    return await _request('/enable-boot-hyperhdr', 'POST');
+  }
+
   Future<Map<String, dynamic>?> stop() async {
     return await _request('/stop-hyperhdr', 'POST');
+  }
+
+  Future<Map<String, dynamic>?> disableOnBoot() async {
+    return await _request('/disable-boot-hyperhdr', 'POST');
   }
 
   Future<Map<String, dynamic>?> getVersion() async {

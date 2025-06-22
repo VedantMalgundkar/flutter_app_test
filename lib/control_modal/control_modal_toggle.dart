@@ -16,8 +16,11 @@ class ControlModalToggle extends StatefulWidget {
 class _ControlModalToggleState extends State<ControlModalToggle>
     with SingleTickerProviderStateMixin {
   late final HttpService _hyperhdr;
+  Timer? _bootToggleDebounceTimer;
+  Timer? _statusToggleDebounceTimer;
 
   bool _isRunning = false;
+  bool _isBootEnabled = false;
   bool _isFetching = true;
   bool _isToggling = false;
   bool _isPollingActive = false;
@@ -33,6 +36,9 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   void initState() {
     super.initState();
     _hyperhdr = context.read<HttpServiceProvider>().service;
+    _fetchBootStatus();
+    _fetchStatus();
+    _fetchVersion();
     _drawerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -48,7 +54,6 @@ class _ControlModalToggleState extends State<ControlModalToggle>
     setState(() => _isDrawerOpen = !_isDrawerOpen);
     if (_isDrawerOpen) {
       _drawerController.forward();
-      _fetchStatus();
       _startPolling();
       _fetchVersion();
     } else {
@@ -107,6 +112,22 @@ class _ControlModalToggleState extends State<ControlModalToggle>
     }
   }
 
+  Future<void> _fetchBootStatus() async {
+    try {
+      final isBootEnbled = await _hyperhdr.isBootEnbled();
+      if (!mounted) return;
+      setState(() {
+        _isBootEnabled = isBootEnbled;
+      });
+    } on SocketException {
+      if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
+      print("Status check failed: ${e.toString()}");
+      _showMessage("Status check failed: ${e.toString()}");
+    }
+  }
+
   Future<void> _fetchVersion() async {
     try {
       final versionInfo = await _hyperhdr.getVersion();
@@ -122,12 +143,14 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   }
 
   Future<void> _toggleStatus(bool value) async {
+    print("ran _toggleStatus");
     _stopPolling();
 
-    setState(() {
-      _isToggling = true;
-      _isRunning = value;
-    });
+    if (mounted) {
+      setState(() {
+        _isToggling = true;
+      });
+    }
 
     try {
       final res = value ? await _hyperhdr.start() : await _hyperhdr.stop();
@@ -141,14 +164,8 @@ class _ControlModalToggleState extends State<ControlModalToggle>
       String? message;
 
       if (res is Map<String, dynamic>) {
-        success =
-            res['status'] == 'success' ||
-            res['success'] == true ||
-            res['result'] == 'success';
-        message = res['message'] ?? res['msg'] ?? 'Operation completed';
-      } else {
-        success = true;
-        message = 'Operation completed';
+        success = res['status'] == 'success';
+        message = res['message'] ?? 'Operation completed';
       }
 
       if (success) {
@@ -172,6 +189,67 @@ class _ControlModalToggleState extends State<ControlModalToggle>
     }
   }
 
+  void _onStatusToggleRequested(bool value) {
+    _statusToggleDebounceTimer?.cancel(); // Cancel previous
+
+    // Optimistically reflect UI change
+    if (mounted) {
+      setState(() => _isRunning = value);
+    }
+
+    _statusToggleDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _toggleStatus(value);
+    });
+  }
+
+  Future<void> _toggleBootStatus(bool value) async {
+    print("ran _toggleBootStatus");
+
+    try {
+      final res = value
+          ? await _hyperhdr.enableOnBoot()
+          : await _hyperhdr.disableOnBoot();
+
+      if (res == null) {
+        throw Exception('No response from service');
+      }
+
+      bool success = false;
+      String? message;
+
+      if (res is Map<String, dynamic>) {
+        success = res['status'] == 'success';
+        message = res['message'] ?? 'Operation completed';
+      }
+
+      if (success) {
+        _showMessage(message!, color: Colors.green);
+      } else {
+        throw Exception(message ?? 'Operation failed');
+      }
+    } catch (e) {
+      print('Toggle error: $e');
+      _showMessage("Toggle Boot failed: ${e.toString()}");
+      if (mounted) {
+        setState(() => _isBootEnabled = !value);
+      }
+    }
+  }
+
+  void _onBootToggleRequested(bool value) {
+    // Cancel any existing debounce timer
+    _bootToggleDebounceTimer?.cancel();
+
+    if (mounted) {
+      setState(() => _isBootEnabled = value);
+    }
+
+    // Start a new debounce timer
+    _bootToggleDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _toggleBootStatus(value); // Your actual API call
+    });
+  }
+
   void _showMessage(String message, {Color color = Colors.red}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -187,6 +265,8 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   void dispose() {
     _pollingTimer?.cancel();
     _drawerController.dispose();
+    _statusToggleDebounceTimer?.cancel();
+    _bootToggleDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -237,9 +317,36 @@ class _ControlModalToggleState extends State<ControlModalToggle>
                               ),
                               child: Switch(
                                 value: _isRunning,
-                                onChanged: _isToggling ? null : _toggleStatus,
-                                activeColor: Colors.green,
+                                onChanged: _isToggling
+                                    ? null
+                                    : _onStatusToggleRequested,
+                                // activeColor: Colors.green,
                                 inactiveThumbColor: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _isBootEnabled
+                                  ? "Disable on boot"
+                                  : "Enable on boot",
+                            ),
+
+                            SizedBox(
+                              width: 80,
+                              child: Center(
+                                child: Checkbox(
+                                  value: _isBootEnabled,
+                                  onChanged: (value) =>
+                                      _onBootToggleRequested(value!),
+                                ),
                               ),
                             ),
                           ],
@@ -286,18 +393,16 @@ class _ControlModalToggleState extends State<ControlModalToggle>
           ),
         ),
 
-        // 3. Toggle icon (only shown when drawer is closed)
-        // if (!_isDrawerOpen)
+        // 3. Drawer Toggle icon
         Positioned(
           top: !_isDrawerOpen ? 0 : null,
           left: 0,
           right: 0,
-          bottom: _isDrawerOpen ? -6 : null,
+          bottom: _isDrawerOpen ? -2 : null,
           child: Center(
             child: GestureDetector(
               onTap: _toggleDrawer,
               child: Container(
-                // padding: const EdgeInsets.all(8),
                 child: Icon(
                   !_isDrawerOpen
                       ? Icons.keyboard_arrow_down

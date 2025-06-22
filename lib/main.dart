@@ -20,7 +20,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'My Devices',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData.from(
+        colorScheme: const ColorScheme.light(
+          primary: Colors.blue,
+          secondary: Colors.blueAccent,
+        ),
+      ),
       home: const HyperhdrDiscoveryPage(),
     );
   }
