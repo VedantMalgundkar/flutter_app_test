@@ -17,6 +17,7 @@ class _ControlPageState extends State<ControlPage> {
   late final HttpService _hyperhdr;
   String _ssid = "---"; // default fallback
   bool isLoading = false;
+  bool _isChangeDeviceDrawerOpen = false;
 
   @override
   void initState() {
@@ -60,26 +61,54 @@ class _ControlPageState extends State<ControlPage> {
         ),
         backgroundColor: Colors.blue,
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.wifi),
-                const SizedBox(height: 1),
-                SizedBox(
-                  width: 60,
-                  child: Center(
-                    child: Text(
-                      _ssid,
-                      style: const TextStyle(fontSize: 8),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isChangeDeviceDrawerOpen = !_isChangeDeviceDrawerOpen;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 8,
                   ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  minimumSize: Size.zero, // Prevents default min size
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.sync_alt, size: 10),
+                    SizedBox(width: 4),
+                    Text("Change Device", style: TextStyle(fontSize: 9)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi),
+                    const SizedBox(height: 1),
+                    SizedBox(
+                      width: 60,
+                      child: Center(
+                        child: Text(
+                          _ssid,
+                          style: const TextStyle(fontSize: 8),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -87,6 +116,62 @@ class _ControlPageState extends State<ControlPage> {
         children: [
           Positioned.fill(child: WebViewContainer()),
           Positioned(top: 0, left: 0, right: 0, child: ControlModalToggle()),
+          // BACKDROP to dismiss drawer
+          if (_isChangeDeviceDrawerOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isChangeDeviceDrawerOpen = false;
+                  });
+                },
+                child: Container(
+                  color: Colors.black.withAlpha((0.2 * 255).round()),
+                ),
+              ),
+            ),
+
+          // Change Device Drawer
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedSlide(
+              offset: _isChangeDeviceDrawerOpen
+                  ? Offset.zero
+                  : const Offset(0, -1),
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text("Device A"),
+                    SizedBox(height: 8),
+                    Text("Device B"),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
