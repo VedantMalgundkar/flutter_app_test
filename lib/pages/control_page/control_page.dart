@@ -5,6 +5,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../../services/http_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
+import '../../pages/hyperhdr_discovery_page/hyperhdr_service_list.dart';
 
 class ControlPage extends StatefulWidget {
   const ControlPage({super.key});
@@ -141,33 +142,37 @@ class _ControlPageState extends State<ControlPage> {
                   ? Offset.zero
                   : const Offset(0, -1),
               duration: const Duration(milliseconds: 300),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 1),
+              child: SizedBox(
+                height: 300,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text("Device A"),
-                    SizedBox(height: 8),
-                    Text("Device B"),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha((0.2 * 255).round()),
+                        blurRadius: 10,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  child: HyperhdrServiceList(
+                    onSelect: (selectedDevice) {
+                      final url = selectedDevice['url'] as Uri;
+                      final hyperUrl = selectedDevice['hyperUrl'] as Uri;
+
+                      print("url $url");
+                      print("hyperUrl $hyperUrl");
+                    },
+                  ),
                 ),
               ),
             ),

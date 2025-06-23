@@ -5,25 +5,28 @@ class HyperhdrDiscoveryService {
     final mdns = MDnsClient();
     final List<Map<String, dynamic>> servers = [];
 
-    await mdns.start();
+    try {
+      await mdns.start();
 
-    await for (final ptr in mdns.lookup<PtrResourceRecord>(
-      ResourceRecordQuery.serverPointer('_hyperhdr._tcp.local'),
-    )) {
-      await for (final srv in mdns.lookup<SrvResourceRecord>(
-        ResourceRecordQuery.service(ptr.domainName),
+      await for (final ptr in mdns.lookup<PtrResourceRecord>(
+        ResourceRecordQuery.serverPointer('_hyperhdr._tcp.local'),
       )) {
-        await for (final ip in mdns.lookup<IPAddressResourceRecord>(
-          ResourceRecordQuery.addressIPv4(srv.target),
+        await for (final srv in mdns.lookup<SrvResourceRecord>(
+          ResourceRecordQuery.service(ptr.domainName),
         )) {
-          final uri = Uri.parse("http://${ip.address.address}:${srv.port}");
-          final hypUri = Uri.parse("http://${ip.address.address}:8090");
-          servers.add({"label": srv.target, "url": uri, "hyperUrl": hypUri});
+          await for (final ip in mdns.lookup<IPAddressResourceRecord>(
+            ResourceRecordQuery.addressIPv4(srv.target),
+          )) {
+            final uri = Uri.parse("http://${ip.address.address}:${srv.port}");
+            final hypUri = Uri.parse("http://${ip.address.address}:8090");
+            servers.add({"label": srv.target, "url": uri, "hyperUrl": hypUri});
+          }
         }
       }
+    } finally {
+      mdns.stop(); // ensures cleanup happens after all streams finish
     }
 
-    mdns.stop();
     return servers;
   }
 }
