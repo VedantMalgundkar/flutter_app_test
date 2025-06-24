@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import '../../../services/hyperhdr_discovery_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
+import './hyperhdr_service_tile.dart';
 
 class HyperhdrServiceList extends StatefulWidget {
   final void Function(Map<String, dynamic> selected)? onSelect;
@@ -65,43 +66,13 @@ class _HyperhdrServiceListState extends State<HyperhdrServiceList> {
               itemCount: servers!.length,
               itemBuilder: (context, index) {
                 final device = servers![index];
-                final label = device["label"];
                 final globalUri = context.read<HttpServiceProvider>().baseUrl;
 
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                    // horizontal: 8.0,
-                    vertical: 4.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xfffffbff),
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: ListTile(
-                    title: Text(label),
-                    trailing: globalUri == device["url"]
-                        ? Icon(
-                            Icons.check,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 24,
-                          )
-                        : ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              minimumSize: const Size(100, 30),
-                            ),
-                            child: const Text("Connect"),
-                            onPressed: () => widget.onSelect?.call(device),
-                          ),
-                  ),
+                return HyperhdrServiceTile(
+                  key: ValueKey(device["url"] ?? index),
+                  device: device,
+                  globalUri: globalUri,
+                  onSelect: widget.onSelect,
                 );
               },
             ),

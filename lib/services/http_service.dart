@@ -53,6 +53,14 @@ class HttpService {
     }
   }
 
+  Future<Map<String, dynamic>?> setHostname(String hostname) async {
+    return await _request(
+      '/set-unique-hostname',
+      'POST',
+      body: {'hostname': hostname},
+    );
+  }
+
   Future<bool> isRunning() async {
     final res = await _request('/status-hyperhdr', 'GET');
     return res?['hyperhdr_status'] == 'active';
