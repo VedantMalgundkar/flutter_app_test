@@ -20,16 +20,26 @@ class HyperhdrServiceTile extends StatefulWidget {
 }
 
 class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
-  late final HttpService _hyperhdr;
+  late HttpService _hyperhdr;
   bool isLoading = false;
   late TextEditingController _controller;
+  bool shouldEditVisible = true;
   bool isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _hyperhdr = context.read<HttpServiceProvider>().service;
-    _controller = TextEditingController(text: widget.device["label"]);
+    final provider = context.read<HttpServiceProvider>();
+    if (provider.baseUrl == null) {
+      shouldEditVisible = false;
+    } else {
+      shouldEditVisible = true;
+      _hyperhdr = provider.service;
+    }
+
+    _controller = TextEditingController(
+      text: widget.device["label"].split("-")[0].trim(),
+    );
   }
 
   @override
@@ -40,8 +50,11 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
 
   void _saveName() {
     setState(() => isEditing = false);
-    widget.device["label"] = _controller.text;
-    updateHostName(_controller.text);
+    if (widget.device["label"].split("-")[0].trim().toLowerCase() !=
+        _controller.text.trim().toLowerCase()) {
+      widget.device["label"] = _controller.text;
+      updateHostName(_controller.text);
+    }
   }
 
   Future<void> updateHostName(String hostname) async {
@@ -49,7 +62,6 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
 
     try {
       final result = await _hyperhdr.setHostname(hostname);
-      print("result $result");
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,17 +103,18 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
                       onSubmitted: (_) => _saveName(),
                     ),
                   )
-                : Expanded(child: Text(_controller.text.split("-")[0].trim())),
-            IconButton(
-              icon: Icon(isEditing ? Icons.check : Icons.edit),
-              onPressed: () {
-                if (isEditing) {
-                  _saveName();
-                } else {
-                  setState(() => isEditing = true);
-                }
-              },
-            ),
+                : Expanded(child: Text(_controller.text)),
+            if (shouldEditVisible)
+              IconButton(
+                icon: Icon(isEditing ? Icons.check : Icons.edit),
+                onPressed: () {
+                  if (isEditing) {
+                    _saveName();
+                  } else {
+                    setState(() => isEditing = true);
+                  }
+                },
+              ),
           ],
         ),
         trailing: isSelected
