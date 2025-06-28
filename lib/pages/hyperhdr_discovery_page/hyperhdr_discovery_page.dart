@@ -31,8 +31,9 @@ class HyperhdrDiscoveryPage extends StatelessWidget {
           final url = selectedDevice['url'] as Uri;
           final hyperUrl = selectedDevice['hyperUrl'] as Uri;
 
-          context.read<HttpServiceProvider>().updateBaseUrl(url);
-          context.read<HttpServiceProvider>().updateHyperUri(hyperUrl);
+          final httpProvider = context.read<HttpServiceProvider>();
+          httpProvider.updateBaseUrl(url);
+          httpProvider.updateHyperUri(hyperUrl);
 
           Navigator.pushReplacement(
             context,

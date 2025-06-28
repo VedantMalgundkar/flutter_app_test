@@ -3,7 +3,9 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get_it/get_it.dart';
 import '../../services/ble_service.dart';
 import '../../wifi_list.dart';
-import '../../hyperhdr_control.dart';
+import 'package:provider/provider.dart';
+import '../../services/http_service_provider.dart';
+import '../../pages/control_page/control_page.dart';
 
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
@@ -25,11 +27,28 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
 
     final bool hasValidIp = ipaddr != null && ipaddr.trim().isNotEmpty;
 
-    final nextPage = hasValidIp
-        ? HyperHdrController()
-        : WifiListWidget(deviceId: widget.device.id);
+    if (hasValidIp) {
+      final url = Uri.parse("http://$ipaddr:5000");
+      final hyperUrl = Uri.parse("http://$ipaddr:8090");
 
-    Navigator.push(context, MaterialPageRoute(builder: (context) => nextPage));
+      final httpProvider = context.read<HttpServiceProvider>();
+      httpProvider.updateBaseUrl(url);
+      httpProvider.updateHyperUri(hyperUrl);
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => ControlPage()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WifiListWidget(deviceId: widget.device.id),
+      ),
+    );
   }
 
   Future<void> _handleConnect() async {

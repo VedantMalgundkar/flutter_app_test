@@ -6,6 +6,9 @@ import '../../services/http_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
 import '../../pages/hyperhdr_discovery_page/hyperhdr_service_list.dart';
+import '../../services/ble_service.dart';
+import 'package:get_it/get_it.dart';
+import '../wifi_page/wifi_page.dart';
 
 class ControlPage extends StatefulWidget {
   const ControlPage({super.key});
@@ -16,8 +19,9 @@ class ControlPage extends StatefulWidget {
 
 class _ControlPageState extends State<ControlPage> {
   late final HttpService _hyperhdr;
-  String _ssid = "---"; // default fallback
-  bool isLoading = false;
+  final BleService bleService = GetIt.I<BleService>();
+  String _ssid = "---";
+  String? _mac;
   bool _isChangeDeviceDrawerOpen = false;
 
   @override
@@ -26,11 +30,10 @@ class _ControlPageState extends State<ControlPage> {
     // _hyperhdr = HttpService(baseUrl: widget.url.toString());
     _hyperhdr = context.read<HttpServiceProvider>().service;
     _getConnectedWifi();
+    _getMacId();
   }
 
   Future<void> _getConnectedWifi() async {
-    setState(() => isLoading = true);
-
     try {
       final result = await _hyperhdr.getConnectedWifi();
       final network = result?["network"];
@@ -40,12 +43,39 @@ class _ControlPageState extends State<ControlPage> {
         });
       }
     } catch (e) {
-      debugPrint("⚠️ Failed to fetch connected Wi-Fi: $e");
+      debugPrint("Failed to fetch connected Wi-Fi: $e");
       setState(() => _ssid = "---");
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _getMacId() async {
+    try {
+      final result = await _hyperhdr.getMac();
+      final mac = result?["mac"];
+      _mac = mac.toUpperCase();
+    } catch (e) {
+      debugPrint("Failed to fetch mac id: $e");
+      _mac = "";
+    }
+  }
+
+  Future<void> handleWifiIconClick() async {
+    try {
+      if (_mac == null || _mac!.isEmpty) {
+        debugPrint("MAC address is null or empty.");
+        return;
       }
+
+      print("MAC addr is >>>> $_mac");
+
+      await bleService.connectToDeviceById(_mac!);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => WifiPage(deviceId: _mac!)),
+      );
+    } catch (e) {
+      debugPrint("Error navigating to WifiPage: $e");
     }
   }
 
@@ -88,22 +118,48 @@ class _ControlPageState extends State<ControlPage> {
                   ],
                 ),
               ),
+              // Padding(
+              //   padding: const EdgeInsets.symmetric(horizontal: 12),
+              //   child: Column(
+              //     mainAxisAlignment: MainAxisAlignment.center,
+              //     children: [
+              //       const Icon(Icons.wifi),
+              //       const SizedBox(height: 1),
+              //       SizedBox(
+              //         width: 60,
+              //         child: Center(
+              //           child: Text(
+              //             _ssid,
+              //             style: const TextStyle(fontSize: 8),
+              //             overflow: TextOverflow.ellipsis,
+              //             maxLines: 1,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.wifi),
-                    const SizedBox(height: 1),
+                    GestureDetector(
+                      onTap: () {
+                        handleWifiIconClick();
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: const Icon(Icons.wifi),
+                    ),
+                    const SizedBox(height: 2), // small manual spacing
                     SizedBox(
                       width: 60,
-                      child: Center(
-                        child: Text(
-                          _ssid,
-                          style: const TextStyle(fontSize: 8),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
+                      child: Text(
+                        _ssid,
+                        style: const TextStyle(fontSize: 8, height: 1),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ],

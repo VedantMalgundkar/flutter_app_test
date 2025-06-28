@@ -20,7 +20,7 @@ class HyperhdrDiscoveryService {
             final uri = Uri.parse("http://${ip.address.address}:${srv.port}");
             final hypUri = Uri.parse("http://${ip.address.address}:8090");
 
-            print("${srv.target}");
+            print({"label": srv.target, "url": uri, "hyperUrl": hypUri});
             servers.add({"label": srv.target, "url": uri, "hyperUrl": hypUri});
           }
         }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import './services/ble_service.dart';
+import '../../services/ble_service.dart';
 
 class WifiListWidget extends StatefulWidget {
   final String deviceId;
@@ -80,7 +80,6 @@ class _WifiListWidgetState extends State<WifiListWidget> {
       isLoading = true;
     });
     final result = await bleService.discoverAndReadWifi(widget.deviceId);
-    print(result);
     setState(() {
       wifiList = result;
       isLoading = false;

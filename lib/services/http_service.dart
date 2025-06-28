@@ -107,6 +107,10 @@ class HttpService {
     return await _request('/get-connected-wifi', 'GET');
   }
 
+  Future<Map<String, dynamic>?> getMac() async {
+    return await _request('/get-mac', 'GET');
+  }
+
   Future<Map<String, dynamic>?> install(String url) async {
     print("base url ${this.baseUrl}");
     final res = await _request(

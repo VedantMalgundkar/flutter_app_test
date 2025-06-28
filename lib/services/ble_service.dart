@@ -59,10 +59,45 @@ class BleService {
     return completer.future;
   }
 
+  Future<bool> connectToDeviceById(String deviceId) async {
+    final completer = Completer<bool>();
+
+    _connectionSub?.cancel();
+    _connectionSub = _ble
+        .connectToDevice(
+          id: deviceId,
+          connectionTimeout: const Duration(seconds: 10),
+        )
+        .listen(
+          (state) {
+            print("Connection State: ${state.connectionState}");
+
+            if (state.connectionState == DeviceConnectionState.connected) {
+              print("Connected to $deviceId");
+              _connectedDeviceId = deviceId;
+              completer.complete(true);
+            } else if (state.connectionState ==
+                DeviceConnectionState.disconnected) {
+              print("Disconnected from $deviceId");
+              _connectedDeviceId = null;
+              if (!completer.isCompleted) completer.complete(false);
+            }
+          },
+          onError: (e) {
+            print("Connection error: $e");
+            _connectedDeviceId = null;
+            if (!completer.isCompleted) completer.complete(false);
+          },
+        );
+
+    return completer.future;
+  }
+
   Future<List<Map<String, dynamic>>> discoverAndReadWifi(
     String deviceId,
   ) async {
     try {
+      print("device ID >>>>>>>>>>>> $deviceId");
       await _ble.discoverAllServices(deviceId); // Triggers discovery
       final services = await _ble.getDiscoveredServices(deviceId);
       // final List<DiscoveredService> services = await _ble.getDiscoveredServices(deviceId);
