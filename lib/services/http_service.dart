@@ -107,6 +107,10 @@ class HttpService {
     return await _request('/get-connected-wifi', 'GET');
   }
 
+  Future<Map<String, dynamic>?> scanNearbyNetworks() async {
+    return await _request('/scan-wifi', 'GET');
+  }
+
   Future<Map<String, dynamic>?> getMac() async {
     return await _request('/get-mac', 'GET');
   }

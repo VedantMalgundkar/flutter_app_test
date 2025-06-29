@@ -19,12 +19,12 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
   bool isConnected = false;
 
   Future<void> _handleRedirect() async {
-    final ipaddr = await bleService.readIp();
+    final ipaddr = await bleService.readIp(deviceId: widget.device.id);
     print("ip is >>>>>>> $ipaddr");
 
     final bool hasValidIp = ipaddr != null && ipaddr.trim().isNotEmpty;
 
-    final nextPage = WifiPage(deviceId: widget.device.id);
+    final nextPage = WifiPage(deviceId: widget.device.id, isFetchApi: false);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) => nextPage));
   }
@@ -33,7 +33,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
     setState(() => isLoading = true);
 
     try {
-      final success = await bleService.connectToDevice(widget.device);
+      final success = await bleService.connectToDevice(device: widget.device);
 
       if (!success) {
         setState(() => isLoading = false);

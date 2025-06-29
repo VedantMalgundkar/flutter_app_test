@@ -68,11 +68,11 @@ class _ControlPageState extends State<ControlPage> {
 
       print("MAC addr is >>>> $_mac");
 
-      await bleService.connectToDeviceById(_mac!);
-
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => WifiPage(deviceId: _mac!)),
+        MaterialPageRoute(
+          builder: (context) => WifiPage(deviceId: _mac!, isFetchApi: true),
+        ),
       );
     } catch (e) {
       debugPrint("Error navigating to WifiPage: $e");

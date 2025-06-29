@@ -20,27 +20,32 @@ class BleService {
 
   StreamSubscription<ConnectionStateUpdate>? _connectionSub;
 
-  Future<bool> connectToDevice(DiscoveredDevice device) async {
+  Future<bool> connectToDevice({
+    DiscoveredDevice? device,
+    String? deviceId,
+  }) async {
     final completer = Completer<bool>();
+    final String? id = device?.id ?? deviceId;
 
-    _connectionSub?.cancel(); // cancel any existing connection
+    if (id == null) {
+      throw ArgumentError("Either 'device' or 'deviceId' must be provided.");
+    }
+
+    _connectionSub?.cancel();
     _connectionSub = _ble
-        .connectToDevice(
-          id: device.id,
-          connectionTimeout: const Duration(seconds: 10),
-        )
+        .connectToDevice(id: id, connectionTimeout: const Duration(seconds: 10))
         .listen(
           (state) async {
             print("Connection State: ${state.connectionState}");
 
             if (state.connectionState == DeviceConnectionState.connected) {
-              print("Connected to ${device.name}  ${device.id}");
-              _connectedDeviceId = device.id;
+              print("Connected to ${device?.name ?? 'device'}  $id");
+              _connectedDeviceId = id;
               completer.complete(true);
             }
 
             if (state.connectionState == DeviceConnectionState.disconnected) {
-              print("Disconnected from ${device.id}");
+              print("Disconnected from $id");
               if (!completer.isCompleted) {
                 _connectedDeviceId = null;
                 completer.complete(false);
@@ -64,40 +69,6 @@ class BleService {
     await _connectionSub?.cancel();
     _connectedDeviceId = null;
     print("Disconnected successfully.");
-  }
-
-  Future<bool> connectToDeviceById(String deviceId) async {
-    final completer = Completer<bool>();
-
-    _connectionSub?.cancel();
-    _connectionSub = _ble
-        .connectToDevice(
-          id: deviceId,
-          connectionTimeout: const Duration(seconds: 10),
-        )
-        .listen(
-          (state) {
-            print("Connection State: ${state.connectionState}");
-
-            if (state.connectionState == DeviceConnectionState.connected) {
-              print("Connected to $deviceId");
-              _connectedDeviceId = deviceId;
-              completer.complete(true);
-            } else if (state.connectionState ==
-                DeviceConnectionState.disconnected) {
-              print("Disconnected from $deviceId");
-              _connectedDeviceId = null;
-              if (!completer.isCompleted) completer.complete(false);
-            }
-          },
-          onError: (e) {
-            print("Connection error: $e");
-            _connectedDeviceId = null;
-            if (!completer.isCompleted) completer.complete(false);
-          },
-        );
-
-    return completer.future;
   }
 
   Future<List<Map<String, dynamic>>> discoverAndReadWifi(
@@ -211,15 +182,11 @@ class BleService {
     }
   }
 
-  Future<String> readIp() async {
-    if (_connectedDeviceId == null) {
-      throw Exception("Connect to device before reading IP address.");
-    }
-
+  Future<String> readIp({required String deviceId}) async {
     final char = QualifiedCharacteristic(
       serviceId: wifiServiceUuid,
       characteristicId: ipCharUuid,
-      deviceId: _connectedDeviceId!,
+      deviceId: deviceId,
     );
 
     final result = await _ble.readCharacteristic(char);
