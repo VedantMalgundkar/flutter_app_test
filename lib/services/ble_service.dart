@@ -59,6 +59,13 @@ class BleService {
     return completer.future;
   }
 
+  Future<void> disconnect() async {
+    print("ran ble disconnected method.");
+    await _connectionSub?.cancel();
+    _connectedDeviceId = null;
+    print("Disconnected successfully.");
+  }
+
   Future<bool> connectToDeviceById(String deviceId) async {
     final completer = Completer<bool>();
 
