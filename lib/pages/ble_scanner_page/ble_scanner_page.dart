@@ -57,8 +57,21 @@ class _BleScannerPageState extends State<BleScannerPage> {
   }
 
   void startScan() {
+    final targetServiceUuid = Uuid.parse(
+      "00000001-710e-4a5b-8d75-3e5b444bc3cf",
+    );
+
+    // .scanForDevices(
+    //   withServices: [targetServiceUuid],
+    //   scanMode: ScanMode.lowLatency, // ensures fastest scanning
+    // )
+    scanSubscription?.cancel();
+
     scanSubscription = flutterReactiveBle
-        .scanForDevices(withServices: [])
+        .scanForDevices(
+          withServices: [],
+          scanMode: ScanMode.lowLatency, // ensures fastest scanning
+        )
         .listen(
           (device) {
             if (devices.indexWhere((d) => d.id == device.id) == -1) {
