@@ -138,16 +138,16 @@ class _WifiListWidgetState extends State<WifiListWidget> {
       result = (res?["networks"] as List).cast<Map<String, dynamic>>();
     } else {
       print("calling BLE Service >>>>>>");
-      // result = await bleService.discoverAndReadWifi(widget.deviceId);
-      result = [
-        {"s": "TP-Link_8CCC", "sr": 77, "lck": 1, "u": 1, "sav": 1},
-        {"s": "Airtel_tush_5151", "sr": 97, "lck": 1, "u": 0, "sav": 0},
-        {"s": "Airtel_ruke_7618", "sr": 65, "lck": 1, "u": 0, "sav": 1},
-        {"s": "TP-Link_8CCC_EXT", "sr": 64, "lck": 1, "u": 0, "sav": 0},
-        {"s": "Airtel_tush_5151", "sr": 62, "lck": 1, "u": 0, "sav": 1},
-        {"s": "Borana5g", "sr": 39, "lck": 1, "u": 0, "sav": 0},
-        {"s": "ZTE_2.4G_R653FD", "sr": 35, "lck": 1, "u": 0, "sav": 0},
-      ];
+      result = await bleService.discoverAndReadWifi(widget.deviceId);
+      // result = [
+      //   {"s": "TP-Link_8CCC", "sr": 77, "lck": 1, "u": 1, "sav": 1},
+      //   {"s": "Airtel_tush_5151", "sr": 97, "lck": 1, "u": 0, "sav": 0},
+      //   {"s": "Airtel_ruke_7618", "sr": 65, "lck": 1, "u": 0, "sav": 1},
+      //   {"s": "TP-Link_8CCC_EXT", "sr": 64, "lck": 1, "u": 0, "sav": 0},
+      //   {"s": "Airtel_tush_5151", "sr": 62, "lck": 1, "u": 0, "sav": 1},
+      //   {"s": "Borana5g", "sr": 39, "lck": 1, "u": 0, "sav": 0},
+      //   {"s": "ZTE_2.4G_R653FD", "sr": 35, "lck": 1, "u": 0, "sav": 0},
+      // ];
     }
     setState(() {
       connectedWifi = result.where((e) => e["u"] == 1).toList();
@@ -171,7 +171,7 @@ class _WifiListWidgetState extends State<WifiListWidget> {
       key: _refreshKey,
       onRefresh: _loadWifiList,
       child: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 10.0),
+        padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
         children: [
           if (connectedWifi.isNotEmpty)
             ...connectedWifi.map((wifi) => _buildWifiTile(wifi)),
@@ -201,7 +201,7 @@ class _WifiListWidgetState extends State<WifiListWidget> {
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      padding: const EdgeInsets.only(top: 15.0),
       child: Text(
         title,
         style: TextStyle(
@@ -220,50 +220,66 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     final isConnected = wifi["u"] == 1;
 
     return ListTile(
-      title: Row(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const Icon(Icons.wifi),
-              if (locked)
-                const Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Icon(Icons.lock, size: 10, color: Colors.black54),
-                ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: isConnected
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        ssid,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        "Connected",
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
+      title: Padding(
+        padding: isConnected
+            ? const EdgeInsets.symmetric(vertical: 8.0)
+            : EdgeInsets.zero,
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                _buildSignalIcon(signal),
+                if (locked)
+                  const Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Icon(Icons.lock, size: 10, color: Colors.black54),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
                     ssid,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 16),
                   ),
-          ),
-        ],
+                  if (isConnected)
+                    Text(
+                      "Connected",
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       onTap: () => _showPasswordDialog(ssid),
     );
+  }
+
+  Widget _buildSignalIcon(int strength) {
+    IconData icon;
+
+    if (strength >= 75) {
+      icon = Icons.wifi_rounded;
+    } else if (strength >= 50) {
+      icon = Icons.wifi_2_bar_rounded;
+    } else if (strength >= 25) {
+      icon = Icons.wifi_1_bar_rounded;
+    } else {
+      icon = Icons.wifi_off_rounded;
+    }
+
+    return Icon(icon);
   }
 }
