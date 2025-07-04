@@ -7,7 +7,8 @@ import 'package:provider/provider.dart';
 import '../services/http_service_provider.dart';
 
 class ControlModalToggle extends StatefulWidget {
-  const ControlModalToggle({super.key});
+  final VoidCallback onClose;
+  const ControlModalToggle({super.key, required this.onClose});
 
   @override
   State<ControlModalToggle> createState() => _ControlModalToggleState();
@@ -24,13 +25,9 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   bool _isFetching = true;
   bool _isToggling = false;
   bool _isPollingActive = false;
-  bool _isDrawerOpen = false;
   String _version = '';
 
   Timer? _pollingTimer;
-
-  late AnimationController _drawerController;
-  late Animation<Offset> _drawerAnimation;
 
   @override
   void initState() {
@@ -39,39 +36,13 @@ class _ControlModalToggleState extends State<ControlModalToggle>
     _fetchBootStatus();
     _fetchStatus();
     _fetchVersion();
-    _drawerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _drawerAnimation =
-        Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
-          CurvedAnimation(parent: _drawerController, curve: Curves.easeInOut),
-        );
-  }
-
-  void _toggleDrawer() {
-    setState(() => _isDrawerOpen = !_isDrawerOpen);
-    if (_isDrawerOpen) {
-      _drawerController.forward();
-      _startPolling();
-      _fetchVersion();
-    } else {
-      _drawerController.reverse();
-      _stopPolling();
-    }
-  }
-
-  void _closeDrawer() {
-    if (_isDrawerOpen) {
-      setState(() {
-        _isDrawerOpen = false;
-      });
-    }
+    _startPolling();
   }
 
   void _startPolling() {
-    _pollingTimer?.cancel();
+    if (_pollingTimer != null && _pollingTimer!.isActive) {
+      return;
+    }
     _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!_isToggling && !_isPollingActive) {
         _fetchStatusWithPollingLock();
@@ -80,7 +51,18 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   }
 
   void _stopPolling() {
-    _pollingTimer?.cancel();
+    if (_pollingTimer != null) {
+      _pollingTimer!.cancel();
+      _pollingTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    _statusToggleDebounceTimer?.cancel();
+    _bootToggleDebounceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchStatusWithPollingLock() async {
@@ -262,152 +244,88 @@ class _ControlModalToggleState extends State<ControlModalToggle>
   }
 
   @override
-  void dispose() {
-    _pollingTimer?.cancel();
-    _drawerController.dispose();
-    _statusToggleDebounceTimer?.cancel();
-    _bootToggleDebounceTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedSlide(
-          offset: _isDrawerOpen ? Offset.zero : const Offset(0, -1),
-          duration: const Duration(milliseconds: 300),
-          child: Container(
-            margin: const EdgeInsets.only(
-              bottom: 10,
-            ), // space below for shadow to be visible
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.2 * 255).round()),
-                  blurRadius: 10,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 1),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_isRunning ? "Stop HyperHDR" : "Start HyperHDR"),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 10,
+                  ),
+                  child: Switch(
+                    value: _isRunning,
+                    onChanged: _isToggling ? null : _onStatusToggleRequested,
+                    // activeColor: Colors.green,
+                    inactiveThumbColor: Colors.grey,
+                  ),
                 ),
               ],
             ),
-            clipBehavior: Clip.none, // <== important
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(_isRunning ? "Stop HyperHDR" : "Start HyperHDR"),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 10,
-                          ),
-                          child: Switch(
-                            value: _isRunning,
-                            onChanged: _isToggling
-                                ? null
-                                : _onStatusToggleRequested,
-                            // activeColor: Colors.green,
-                            inactiveThumbColor: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _isBootEnabled ? "Disable on boot" : "Enable on boot",
-                        ),
-
-                        SizedBox(
-                          width: 80,
-                          child: Center(
-                            child: Checkbox(
-                              value: _isBootEnabled,
-                              onChanged: (value) =>
-                                  _onBootToggleRequested(value!),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Text("Version"),
-                            IconButton(
-                              icon: const Icon(Icons.info_outline),
-                              onPressed: () {
-                                _toggleDrawer();
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => VersionInfoPage(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 10,
-                          ),
-                          child: Text(_version),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
-        ),
 
-        // 3. Drawer Toggle icon
-        Positioned(
-          top: !_isDrawerOpen ? 0 : null,
-          left: 0,
-          right: 0,
-          bottom: _isDrawerOpen ? 9 : null,
-          child: Center(
-            child: GestureDetector(
-              onTap: _toggleDrawer,
-              child: Container(
-                child: Icon(
-                  !_isDrawerOpen
-                      ? Icons.keyboard_arrow_down
-                      : Icons.keyboard_arrow_up,
-                  size: 32,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Enable on boot"),
+
+                SizedBox(
+                  width: 80,
+                  child: Center(
+                    child: Checkbox(
+                      value: _isBootEnabled,
+                      onChanged: (value) => _onBootToggleRequested(value!),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        ),
-      ],
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Text("Version"),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      onPressed: () {
+                        widget.onClose();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => VersionInfoPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 10,
+                  ),
+                  child: Text(_version),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
