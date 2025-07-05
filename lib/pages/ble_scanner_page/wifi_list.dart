@@ -23,6 +23,7 @@ class _WifiListWidgetState extends State<WifiListWidget> {
   late final HttpService? _hyperhdr;
   final BleService bleService = GetIt.I<BleService>();
   List<Map<String, dynamic>> wifiList = [];
+  String _mac = "";
   bool isLoading = false;
   bool iswriteLoading = false;
   bool isBleConnFailed = false;
@@ -37,41 +38,56 @@ class _WifiListWidgetState extends State<WifiListWidget> {
   @override
   void initState() {
     super.initState();
-    debugPrint("initState of WifiListWidget");
+    _initialize();
+  }
 
+  Future<void> _initialize() async {
     if (widget.isFetchApi) {
       setState(() {
         iswriteLoading = true;
       });
 
-      bleService
-          .connectToDevice(deviceId: widget.deviceId)
-          .then((success) {
-            if (mounted) {
-              setState(() {
-                iswriteLoading = false;
-                print("ble Connected. >>>>");
-              });
-            }
-          })
-          .catchError((e) {
-            print("BLE connection failed: $e");
-            if (mounted) {
-              setState(() {
-                iswriteLoading = false;
-                isBleConnFailed = true;
-              });
-            }
-          });
-    }
+      try {
+        await bleService.connectToDevice(deviceId: widget.deviceId);
 
-    if (widget.isFetchApi) {
+        if (mounted) {
+          setState(() {
+            iswriteLoading = false;
+            print("BLE Connected. >>>>");
+          });
+        }
+
+        await _getMacId();
+      } catch (e) {
+        print("BLE connection failed: $e");
+        if (mounted) {
+          setState(() {
+            iswriteLoading = false;
+            isBleConnFailed = true;
+          });
+        }
+      }
+
       _hyperhdr = context.read<HttpServiceProvider>().service;
+    } else {
+      await _getMacId();
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshKey.currentState?.show();
     });
+  }
+
+  Future<void> _getMacId() async {
+    try {
+      final mac = await bleService.readMac();
+      print("BLE MAC RESULT >>>>>>>> $mac");
+      _mac = mac.toUpperCase();
+      print("mac :>>> $_mac");
+    } catch (e) {
+      debugPrint("Failed to fetch mac id: $e");
+      _mac = "";
+    }
   }
 
   void _showPasswordDialog(String ssid) {
@@ -110,14 +126,53 @@ class _WifiListWidgetState extends State<WifiListWidget> {
                   },
                   child: const Text("Cancel"),
                 ),
+
+                // ElevatedButton(
+                //   onPressed: () {
+                //     final password = _passwordController.text;
+                //     Navigator.of(context).pop();
+                //     print("SSID: $ssid, Password: $password");
+                //     // TODO: Use password + ssid
+                //   },
+                //   child: const Text("Connect"),
+                // ),
                 ElevatedButton(
-                  onPressed: () {
-                    final password = _passwordController.text;
-                    Navigator.of(context).pop();
-                    print("SSID: $ssid, Password: $password");
-                    // TODO: Use password + ssid
-                  },
-                  child: const Text("Connect"),
+                  onPressed: iswriteLoading
+                      ? null
+                      : () async {
+                          if (isBleConnFailed) return;
+
+                          setState(() {
+                            iswriteLoading = true;
+                          });
+
+                          final password = _passwordController.text;
+
+                          Navigator.of(context).pop();
+                          print("SSID: $ssid, Password: $password");
+
+                          await bleService.writeCredentials(
+                            _mac,
+                            ssid,
+                            password,
+                          );
+
+                          // setState(() {
+                          //   iswriteLoading = false;
+                          // });
+                        },
+                  child: iswriteLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text("Connect"),
                 ),
               ],
             );

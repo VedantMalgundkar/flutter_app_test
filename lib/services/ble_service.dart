@@ -17,6 +17,7 @@ class BleService {
     "00000004-710e-4a5b-8d75-3e5b444bc3cf",
   );
   final Uuid ipCharUuid = Uuid.parse("00000005-710e-4a5b-8d75-3e5b444bc3cf");
+  final Uuid macCharUuid = Uuid.parse("00000006-710e-4a5b-8d75-3e5b444bc3cf");
 
   StreamSubscription<ConnectionStateUpdate>? _connectionSub;
 
@@ -149,7 +150,8 @@ class BleService {
     String ssid,
     String password,
   ) async {
-    final data = utf8.encode(json.encode({"ssid": ssid, "password": password}));
+    final jsonString = json.encode({"s": ssid, "p": password});
+    final data = utf8.encode(jsonString);
     final characteristic = QualifiedCharacteristic(
       serviceId: wifiServiceUuid,
       characteristicId: scanCharUuid,
@@ -187,6 +189,19 @@ class BleService {
       serviceId: wifiServiceUuid,
       characteristicId: ipCharUuid,
       deviceId: deviceId,
+    );
+
+    final result = await _ble.readCharacteristic(char);
+    return utf8.decode(result);
+  }
+
+  Future<String> readMac() async {
+    if (this._connectedDeviceId == null) return "";
+
+    final char = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: macCharUuid,
+      deviceId: this._connectedDeviceId!,
     );
 
     final result = await _ble.readCharacteristic(char);
