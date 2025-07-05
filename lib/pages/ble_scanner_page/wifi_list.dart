@@ -148,18 +148,26 @@ class _WifiListWidgetState extends State<WifiListWidget> {
 
                           final password = _passwordController.text;
 
-                          Navigator.of(context).pop();
                           print("SSID: $ssid, Password: $password");
 
-                          await bleService.writeCredentials(
-                            _mac,
-                            ssid,
-                            password,
-                          );
+                          try {
+                            await bleService.writeCredentials(
+                              _mac,
+                              ssid,
+                              password,
+                            );
 
-                          // setState(() {
-                          //   iswriteLoading = false;
-                          // });
+                            Future.delayed(const Duration(seconds: 7), () {
+                              _loadWifiList();
+                            });
+                            Navigator.of(context).pop();
+                          } catch (e) {
+                            print("Error writing credentials: $e");
+                          } finally {
+                            setState(() {
+                              iswriteLoading = false;
+                            });
+                          }
                         },
                   child: iswriteLoading
                       ? const SizedBox(
