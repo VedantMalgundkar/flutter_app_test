@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../services/ble_service.dart';
@@ -151,18 +152,23 @@ class _WifiListWidgetState extends State<WifiListWidget> {
                           print("SSID: $ssid, Password: $password");
 
                           try {
-                            await bleService.writeCredentials(
+                            final statusJson = await bleService.sendCredentialsAndWaitForStatus(
                               _mac,
                               ssid,
                               password,
                             );
 
-                            Future.delayed(const Duration(seconds: 7), () {
-                              _loadWifiList();
-                            });
-                            Navigator.of(context).pop();
+                            final data = jsonDecode(statusJson);
+                            if (data['status'] == 'success') {
+                              await _loadWifiList();
+                              Navigator.of(context).pop();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("${data['error'] ?? 'Unknown error'}")),
+                              );
+                            }
                           } catch (e) {
-                            print("Error writing credentials: $e");
+                            print("Unexpected error: $e");
                           } finally {
                             setState(() {
                               iswriteLoading = false;

@@ -184,6 +184,66 @@ class BleService {
     }
   }
 
+  Future<String> sendCredentialsAndWaitForStatus(
+    String deviceId,
+    String ssid,
+    String password,
+  ) async {
+    final jsonString = json.encode({"s": ssid, "p": password});
+    final data = utf8.encode(jsonString);
+
+    final writeChar = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: scanCharUuid, // write-only
+      deviceId: deviceId,
+    );
+
+    final statusChar = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: statusCharUuid, // notify/read
+      deviceId: deviceId,
+    );
+
+    final completer = Completer<String>();
+
+    final sub = _ble.subscribeToCharacteristic(statusChar).listen((value) {
+      final decoded = utf8.decode(value);
+      print("Received WiFi status update: $decoded");
+
+      try {
+        final jsonData = json.decode(decoded);
+        final status = jsonData['status'];
+        if (status == 'success' || status == 'failed') {
+          completer.complete(decoded);
+        }
+      } catch (e) {
+        print("Error decoding status JSON: $e");
+      }
+    });
+
+    try {
+      await _ble.writeCharacteristicWithResponse(writeChar, value: data);
+      print("Wi-Fi credentials sent");
+    } catch (e) {
+      print("Write failed: $e");
+      await sub.cancel();
+      return '{"status": "failed", "error": "write_error"}';
+    }
+
+    // Wait for status or timeout
+    String result;
+    try {
+      result = await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => '{"status": "failed", "error": "timeout"}',
+      );
+    } finally {
+      await sub.cancel(); // clean up
+    }
+
+    return result;
+  }
+
   Future<String> readIp({required String deviceId}) async {
     final char = QualifiedCharacteristic(
       serviceId: wifiServiceUuid,
