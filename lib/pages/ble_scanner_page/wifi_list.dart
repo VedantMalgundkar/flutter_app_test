@@ -287,6 +287,8 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     final signal = wifi["sr"] ?? 0;
     final locked = wifi["lck"] == 1;
     final isConnected = wifi["u"] == 1;
+    final isSaved = wifi["sav"] == 1;
+
 
     return ListTile(
       title: Padding(
@@ -329,6 +331,33 @@ class _WifiListWidgetState extends State<WifiListWidget> {
                 ],
               ),
             ),
+
+            if(isSaved||isConnected)
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'disconnect') {
+                    await bleService.disConnectToNetwork(_mac,ssid);
+                    _loadWifiList();
+                  } else if (value == 'connect') {
+                    await bleService.connectToNetwork(_mac,ssid);
+                    _loadWifiList();
+                  } else if (value == 'forget') {
+                    await bleService.forgetToNetwork(_mac,ssid);
+                    _loadWifiList();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: isConnected ? 'disconnect':'connect',
+                    child: Text(isConnected ? 'Disconnect':'Connect'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'forget',
+                    child: Text('Forget'),
+                  ),
+                ],
+                icon: const Icon(Icons.more_vert),
+              ),
           ],
         ),
       ),

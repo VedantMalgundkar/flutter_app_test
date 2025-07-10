@@ -18,6 +18,9 @@ class BleService {
   );
   final Uuid ipCharUuid = Uuid.parse("00000005-710e-4a5b-8d75-3e5b444bc3cf");
   final Uuid macCharUuid = Uuid.parse("00000006-710e-4a5b-8d75-3e5b444bc3cf");
+  final Uuid wifiForgetCharUuid = Uuid.parse("00000007-710e-4a5b-8d75-3e5b444bc3cf");
+  final Uuid wifiConnCharUuid = Uuid.parse("00000008-710e-4a5b-8d75-3e5b444bc3cf");
+  final Uuid wifiDisConnCharUuid = Uuid.parse("00000009-710e-4a5b-8d75-3e5b444bc3cf");
 
   StreamSubscription<ConnectionStateUpdate>? _connectionSub;
 
@@ -161,6 +164,72 @@ class BleService {
     try {
       await _ble.writeCharacteristicWithResponse(characteristic, value: data);
       print("Wi-Fi credentials sent");
+      return true;
+    } catch (e) {
+      print("Write failed: $e");
+      return false;
+    }
+  }
+  
+  Future<bool> connectToNetwork(
+    String deviceId,
+    String ssid
+  ) async {
+    final jsonString = json.encode({"s": ssid});
+    final data = utf8.encode(jsonString);
+    final characteristic = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: wifiConnCharUuid,
+      deviceId: deviceId,
+    );
+
+    try {
+      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
+      print("Wi-Fi connection req sent");
+      return true;
+    } catch (e) {
+      print("Write failed: $e");
+      return false;
+    }
+  }
+  
+  Future<bool> disConnectToNetwork(
+    String deviceId,
+    String ssid
+  ) async {
+    final jsonString = json.encode({"s": ssid});
+    final data = utf8.encode(jsonString);
+    final characteristic = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: wifiDisConnCharUuid,
+      deviceId: deviceId,
+    );
+
+    try {
+      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
+      print("Wi-Fi disconnection req sent");
+      return true;
+    } catch (e) {
+      print("Write failed: $e");
+      return false;
+    }
+  }
+  
+  Future<bool> forgetToNetwork(
+    String deviceId,
+    String ssid
+  ) async {
+    final jsonString = json.encode({"s": ssid});
+    final data = utf8.encode(jsonString);
+    final characteristic = QualifiedCharacteristic(
+      serviceId: wifiServiceUuid,
+      characteristicId: wifiForgetCharUuid,
+      deviceId: deviceId,
+    );
+
+    try {
+      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
+      print("Wi-Fi forget req sent");
       return true;
     } catch (e) {
       print("Write failed: $e");
