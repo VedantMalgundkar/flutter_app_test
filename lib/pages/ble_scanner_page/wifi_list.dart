@@ -5,6 +5,7 @@ import '../../services/ble_service.dart';
 import '../../services/http_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
+import './wif_password_dialog.dart';
 
 class WifiListWidget extends StatefulWidget {
   final String deviceId;
@@ -35,11 +36,14 @@ class _WifiListWidgetState extends State<WifiListWidget> {
 
   final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();
+  late final Function(String, String) wifiActionThrottledHandler;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _initialize();
+    wifiActionThrottledHandler = throttledWifiAction();
   }
 
   Future<void> _initialize() async {
@@ -91,107 +95,47 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     }
   }
 
-  void _showPasswordDialog(String ssid) {
-    final TextEditingController _passwordController = TextEditingController();
-    bool _obscureText = true;
+  Future<void> handleWifiCredsWrite(String ssid, String password) async {
+    if (isBleConnFailed) return;
 
+    print("SSID: $ssid, Password: $password");
+
+    try {
+      if (password.trim().isEmpty) {
+        throw ArgumentError("Password cannot be empty");
+      }
+
+      final statusJson = await bleService.sendCredentialsAndWaitForStatus(
+        _mac,
+        ssid,
+        password,
+      );
+
+      final data = jsonDecode(statusJson);
+
+      if (data['status'] != 'success') {
+        throw Exception(data['error'] ?? 'Failed to connect');
+      }
+
+      await _loadWifiList();
+      Navigator.of(context).pop();
+    } on ArgumentError catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? "Invalid input")));
+    } catch (e) {
+      print("Unexpected error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  void _showPasswordDialog(String ssid) {
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text("Connect to $ssid"),
-              content: TextField(
-                controller: _passwordController,
-                obscureText: _obscureText,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text("Cancel"),
-                ),
-
-                // ElevatedButton(
-                //   onPressed: () {
-                //     final password = _passwordController.text;
-                //     Navigator.of(context).pop();
-                //     print("SSID: $ssid, Password: $password");
-                //     // TODO: Use password + ssid
-                //   },
-                //   child: const Text("Connect"),
-                // ),
-                ElevatedButton(
-                  onPressed: iswriteLoading
-                      ? null
-                      : () async {
-                          if (isBleConnFailed) return;
-
-                          setState(() {
-                            iswriteLoading = true;
-                          });
-
-                          final password = _passwordController.text;
-
-                          print("SSID: $ssid, Password: $password");
-
-                          try {
-                            final statusJson = await bleService.sendCredentialsAndWaitForStatus(
-                              _mac,
-                              ssid,
-                              password,
-                            );
-
-                            final data = jsonDecode(statusJson);
-                            if (data['status'] == 'success') {
-                              await _loadWifiList();
-                              Navigator.of(context).pop();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("${data['error'] ?? 'Unknown error'}")),
-                              );
-                            }
-                          } catch (e) {
-                            print("Unexpected error: $e");
-                          } finally {
-                            setState(() {
-                              iswriteLoading = false;
-                            });
-                          }
-                        },
-                  child: iswriteLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Text("Connect"),
-                ),
-              ],
-            );
-          },
-        );
+        return WifiPasswordDialog(ssid: ssid, onSubmit: handleWifiCredsWrite);
       },
     );
   }
@@ -226,6 +170,65 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     });
   }
 
+  Future<void> handleWifiAction(ssid, action) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String actionData;
+      switch (action) {
+        case 'connect':
+          actionData = "add";
+          break;
+        case 'disconnect':
+          actionData = "sub";
+          break;
+        case 'forget':
+          actionData = "del";
+          break;
+        default:
+          throw ArgumentError("Invalid action: $action");
+      }
+
+      final statusJson = await bleService.commonWifiActions(
+        _mac,
+        ssid,
+        actionData,
+      );
+
+      final data = jsonDecode(statusJson);
+      if (data['status'] != 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("${data['error'] ?? 'Unknown error'}")),
+        );
+        return;
+      }
+      await _loadWifiList();
+    } catch (e) {
+      print("Unexpected error: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Function(String, String) throttledWifiAction() {
+    bool inProgress = false;
+
+    return (String ssid, String action) async {
+      if (inProgress) return;
+      inProgress = true;
+
+      try {
+        await handleWifiAction(ssid, action);
+      } finally {
+        inProgress = false;
+      }
+    };
+  }
+
   @override
   void dispose() {
     if (widget.isFetchApi) {
@@ -234,42 +237,76 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      key: _refreshKey,
-      onRefresh: _loadWifiList,
-      child: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
-        children: [
-          if (connectedWifi.isNotEmpty)
-            ...connectedWifi.map((wifi) => _buildWifiTile(wifi)),
+  Widget buildTopLinearLoader(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
 
-          if (savedWifi.isNotEmpty) ...[
-            _buildSectionHeader("Saved Networks"),
-            ...savedWifi.map((wifi) => _buildWifiTile(wifi)),
-          ],
-
-          if (otherWifi.isNotEmpty) ...[
-            _buildSectionHeader("Available Networks"),
-            ...otherWifi.map((wifi) => _buildWifiTile(wifi)),
-          ],
-        ],
+    return Container(
+      height: 4,
+      color: Colors.transparent,
+      child: LinearProgressIndicator(
+        minHeight: 4,
+        backgroundColor: primary.withOpacity(0.2),
+        valueColor: AlwaysStoppedAnimation<Color>(primary),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Color.fromARGB(255, 198, 198, 198),
-            width: 0.5,
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          key: _refreshKey,
+          onRefresh: _loadWifiList,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10.0,
+              vertical: 5.0,
+            ),
+            children: [
+              if (connectedWifi.isNotEmpty)
+                ...connectedWifi.map((wifi) => _buildWifiTile(wifi)),
+
+              if (savedWifi.isNotEmpty) ...[
+                _buildSectionHeader(
+                  "Saved Networks",
+                  wantBorder: connectedWifi.isNotEmpty,
+                ),
+                ...savedWifi.map((wifi) => _buildWifiTile(wifi)),
+              ],
+
+              if (otherWifi.isNotEmpty) ...[
+                _buildSectionHeader("Available Networks"),
+                ...otherWifi.map((wifi) => _buildWifiTile(wifi)),
+              ],
+            ],
           ),
         ),
-      ),
+
+        if (_isLoading)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: buildTopLinearLoader(context),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {bool wantBorder = true}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: wantBorder
+          ? const BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Color.fromARGB(255, 198, 198, 198),
+                  width: 0.5,
+                ),
+              ),
+            )
+          : null,
       padding: const EdgeInsets.only(top: 15.0),
       child: Text(
         title,
@@ -288,7 +325,6 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     final locked = wifi["lck"] == 1;
     final isConnected = wifi["u"] == 1;
     final isSaved = wifi["sav"] == 1;
-
 
     return ListTile(
       title: Padding(
@@ -332,36 +368,32 @@ class _WifiListWidgetState extends State<WifiListWidget> {
               ),
             ),
 
-            if(isSaved||isConnected)
+            if (isSaved || isConnected)
               PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'disconnect') {
-                    await bleService.disConnectToNetwork(_mac,ssid);
-                    _loadWifiList();
-                  } else if (value == 'connect') {
-                    await bleService.connectToNetwork(_mac,ssid);
-                    _loadWifiList();
-                  } else if (value == 'forget') {
-                    await bleService.forgetToNetwork(_mac,ssid);
-                    _loadWifiList();
-                  }
+                onSelected: (value) {
+                  wifiActionThrottledHandler(ssid, value);
                 },
                 itemBuilder: (BuildContext context) => [
                   PopupMenuItem(
-                    value: isConnected ? 'disconnect':'connect',
-                    child: Text(isConnected ? 'Disconnect':'Connect'),
+                    value: isConnected ? 'disconnect' : 'connect',
+                    child: Text(isConnected ? 'Disconnect' : 'Connect'),
                   ),
-                  const PopupMenuItem(
-                    value: 'forget',
-                    child: Text('Forget'),
-                  ),
+                  const PopupMenuItem(value: 'forget', child: Text('Forget')),
                 ],
                 icon: const Icon(Icons.more_vert),
               ),
           ],
         ),
       ),
-      onTap: () => _showPasswordDialog(ssid),
+      onTap: () {
+        if (isSaved || !locked) {
+          wifiActionThrottledHandler(ssid, "connect");
+          return;
+        }
+        if (!isConnected) {
+          _showPasswordDialog(ssid);
+        }
+      },
     );
   }
 

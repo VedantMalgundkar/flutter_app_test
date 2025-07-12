@@ -18,9 +18,9 @@ class BleService {
   );
   final Uuid ipCharUuid = Uuid.parse("00000005-710e-4a5b-8d75-3e5b444bc3cf");
   final Uuid macCharUuid = Uuid.parse("00000006-710e-4a5b-8d75-3e5b444bc3cf");
-  final Uuid wifiForgetCharUuid = Uuid.parse("00000007-710e-4a5b-8d75-3e5b444bc3cf");
-  final Uuid wifiConnCharUuid = Uuid.parse("00000008-710e-4a5b-8d75-3e5b444bc3cf");
-  final Uuid wifiDisConnCharUuid = Uuid.parse("00000009-710e-4a5b-8d75-3e5b444bc3cf");
+  final Uuid wifiActionCharUuid = Uuid.parse(
+    "00000008-710e-4a5b-8d75-3e5b444bc3cf",
+  );
 
   StreamSubscription<ConnectionStateUpdate>? _connectionSub;
 
@@ -170,71 +170,70 @@ class BleService {
       return false;
     }
   }
-  
-  Future<bool> connectToNetwork(
+
+  Future<String> commonWifiActions(
     String deviceId,
-    String ssid
+    String ssid,
+    String action,
   ) async {
-    final jsonString = json.encode({"s": ssid});
+
+    if (action.isEmpty || !["add", "sub", "del"].contains(action)) {
+      throw ArgumentError("Invalid action: $action");
+    }
+
+    final payload = {"s": ssid, "a":action};
+    final jsonString = json.encode(payload);
     final data = utf8.encode(jsonString);
-    final characteristic = QualifiedCharacteristic(
+
+    final writeChar = QualifiedCharacteristic(
       serviceId: wifiServiceUuid,
-      characteristicId: wifiConnCharUuid,
+      characteristicId: wifiActionCharUuid,
       deviceId: deviceId,
     );
 
-    try {
-      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
-      print("Wi-Fi connection req sent");
-      return true;
-    } catch (e) {
-      print("Write failed: $e");
-      return false;
-    }
-  }
-  
-  Future<bool> disConnectToNetwork(
-    String deviceId,
-    String ssid
-  ) async {
-    final jsonString = json.encode({"s": ssid});
-    final data = utf8.encode(jsonString);
-    final characteristic = QualifiedCharacteristic(
+    final statusChar = QualifiedCharacteristic(
       serviceId: wifiServiceUuid,
-      characteristicId: wifiDisConnCharUuid,
+      characteristicId: statusCharUuid,
       deviceId: deviceId,
     );
 
-    try {
-      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
-      print("Wi-Fi disconnection req sent");
-      return true;
-    } catch (e) {
-      print("Write failed: $e");
-      return false;
-    }
-  }
-  
-  Future<bool> forgetToNetwork(
-    String deviceId,
-    String ssid
-  ) async {
-    final jsonString = json.encode({"s": ssid});
-    final data = utf8.encode(jsonString);
-    final characteristic = QualifiedCharacteristic(
-      serviceId: wifiServiceUuid,
-      characteristicId: wifiForgetCharUuid,
-      deviceId: deviceId,
-    );
+    final completer = Completer<String>();
+
+    final sub = _ble.subscribeToCharacteristic(statusChar).listen((value) {
+      final decoded = utf8.decode(value);
+      print("Received WiFi status update: $decoded");
+
+      try {
+        final jsonData = json.decode(decoded);
+        final status = jsonData['status'];
+        if (status == 'success' || status == 'failed') {
+          completer.complete(decoded);
+        }
+      } catch (e) {
+        print("Error decoding status JSON: $e");
+      }
+    });
 
     try {
-      await _ble.writeCharacteristicWithResponse(characteristic, value: data);
-      print("Wi-Fi forget req sent");
-      return true;
+      await _ble.writeCharacteristicWithResponse(writeChar, value: data);
+      print("Wi-Fi $action request sent");
     } catch (e) {
       print("Write failed: $e");
-      return false;
+      await sub.cancel();
+      return '{"status": "failed", "error": "write_error"}';
     }
+
+    String result;
+    try {
+      result = await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => '{"status": "failed", "error": "timeout"}',
+      );
+    } finally {
+      await sub.cancel(); // ensure cancel always happens
+    }
+
+    return result;
   }
 
   Future<String> readStatus(String deviceId) async {
