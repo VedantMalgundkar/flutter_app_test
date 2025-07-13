@@ -19,14 +19,20 @@ class _BleScannerPageState extends State<BleScannerPage> {
   StreamSubscription<DiscoveredDevice>? scanSubscription;
   // final bleService = BleService(flutterReactiveBle);
   final BleService bleService = GetIt.I<BleService>();
+  late final Future<void> Function() startScanThrottled;
+  bool isScanning = false;
+  bool _throttleLock = false;
+  Timer? _scanTimeoutTimer;
 
   @override
   void initState() {
     super.initState();
+    startScanThrottled = throttledStartScan();
+
     requestPermissions().then((_) {
       flutterReactiveBle.statusStream.listen((status) {
         if (status == BleStatus.ready) {
-          startScan();
+          startScanThrottled();
         } else if (status == BleStatus.poweredOff) {
           showDialog(
             context: context,
@@ -56,7 +62,18 @@ class _BleScannerPageState extends State<BleScannerPage> {
     ].request();
   }
 
-  void startScan() {
+  void stopScan({bool shouldSetState = true}) {
+    scanSubscription?.cancel();
+    scanSubscription = null;
+
+    if (shouldSetState && mounted) {
+      setState(() => isScanning = false);
+    }
+
+    _throttleLock = false;
+  }
+
+  Future<void> startScan() async {
     final targetServiceUuid = Uuid.parse(
       "00000001-710e-4a5b-8d75-3e5b444bc3cf",
     );
@@ -65,6 +82,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
     //   withServices: [targetServiceUuid],
     //   scanMode: ScanMode.lowLatency, // ensures fastest scanning
     // )
+    setState(() => devices.clear());
     scanSubscription?.cancel();
 
     scanSubscription = flutterReactiveBle
@@ -82,34 +100,76 @@ class _BleScannerPageState extends State<BleScannerPage> {
           },
           onError: (err) {
             print("Scan failed: $err");
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(err.message ?? "Scanning Failed")),
+            );
+            stopScan();
           },
         );
+
+    _scanTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) stopScan();
+    });
+  }
+
+  Future<void> Function() throttledStartScan() {
+    return () async {
+      if (_throttleLock) return;
+      _throttleLock = true;
+
+      setState(() => isScanning = true);
+      await startScan();
+    };
   }
 
   @override
   void dispose() {
-    scanSubscription?.cancel();
+    stopScan(shouldSetState: false);
+    _scanTimeoutTimer?.cancel();
     bleService.disconnect();
     super.dispose();
+  }
+
+  Widget buildTopLinearLoader(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      height: 4,
+      color: Colors.transparent,
+      child: LinearProgressIndicator(
+        minHeight: 4,
+        backgroundColor: primary.withOpacity(0.2),
+        valueColor: AlwaysStoppedAnimation<Color>(primary),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Add Device to Network")),
-      body: ListView.builder(
-        itemCount: devices.length,
-        itemBuilder: (context, index) {
-          final d = devices[index];
-          return BleDeviceTile(device: d);
-        },
+      body: Stack(
+        children: [
+          ListView.builder(
+            itemCount: devices.length,
+            itemBuilder: (context, index) {
+              final d = devices[index];
+              return BleDeviceTile(device: d);
+            },
+          ),
+          if (isScanning)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: buildTopLinearLoader(context),
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.refresh),
         onPressed: () {
-          setState(() => devices.clear());
-          scanSubscription?.cancel();
-          startScan();
+          startScanThrottled();
         },
       ),
     );
