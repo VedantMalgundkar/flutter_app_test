@@ -6,8 +6,15 @@ import '../wifi_page/wifi_page.dart';
 
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
+  final bool disabled;
+  final void Function(String deviceId)? onLoading;
 
-  const BleDeviceTile({Key? key, required this.device}) : super(key: key);
+  const BleDeviceTile({
+    Key? key,
+    required this.device,
+    required this.disabled,
+    this.onLoading,
+  }) : super(key: key);
 
   @override
   State<BleDeviceTile> createState() => _BleDeviceTileState();
@@ -29,10 +36,45 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
     Navigator.push(context, MaterialPageRoute(builder: (context) => nextPage));
   }
 
+  // Future<void> _handleConnect() async {
+  //   setState(() => isLoading = true);
+
+  //   try {
+  //     final success = await bleService.connectToDevice(device: widget.device);
+
+  //     if (!success) {
+  //       setState(() => isLoading = false);
+  //       print("Failed to connect to device.");
+  //       return;
+  //     }
+
+  //     setState(() {
+  //       isConnected = true;
+  //       isLoading = false;
+  //     });
+
+  //     await _handleRedirect();
+  //   } catch (e) {
+  //     setState(() => isLoading = false);
+  //     print("Error during connection or IP read: $e");
+  //   }
+  // }
   Future<void> _handleConnect() async {
     setState(() => isLoading = true);
 
     try {
+
+      if (widget.onLoading != null) {
+        widget.onLoading!(widget.device.id);
+      }
+
+      if(isConnected) {
+        await bleService.disconnect();
+        return;
+      }
+
+      print("connecting to  ${widget.device.id}");
+
       final success = await bleService.connectToDevice(device: widget.device);
 
       if (!success) {
@@ -41,16 +83,18 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         return;
       }
 
-      setState(() {
-        isConnected = true;
-        isLoading = false;
-      });
-
-      await _handleRedirect();
+      
+      // await _handleRedirect();
     } catch (e) {
       setState(() => isLoading = false);
       print("Error during connection or IP read: $e");
+    } finally {
+      setState(() {
+        isConnected = !isConnected;
+        isLoading = false;
+      });
     }
+     
   }
 
   @override
@@ -74,26 +118,57 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         onTap: () async {
           await _handleRedirect();
         },
-        trailing: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : isConnected || isSelected
-            ? ElevatedButton(
-                onPressed: _handleConnect,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                child: const Text("Reconnect"),
-              )
-            : ElevatedButton(
-                onPressed: _handleConnect,
-                child: const Text("Connect"),
-              ),
+        trailing: ElevatedButton(
+          onPressed: widget.disabled ? null : _handleConnect,
+          child: SizedBox(
+            width: 54,
+            child: Center(
+              child: isLoading
+                  ? SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      widget.disabled
+                          ? "disabled"
+                          : (isConnected || isSelected)
+                          ? "Disconnect"
+                          : "Connect",
+                    ),
+            ),
+          ),
+        ),
+
+        // widget.disabled ? ElevatedButton(
+        //       onPressed: ()=>{},
+        //       child: const Text("disabled"),
+        //     ):
+        // isLoading
+        //   ? const SizedBox(
+        //       height: 20,
+        //       width: 20,
+        //       child: CircularProgressIndicator(strokeWidth: 2),
+        //     )
+        //   : isConnected || isSelected
+        //   ? ElevatedButton(
+        //       onPressed: _handleConnect,
+        //       style: ElevatedButton.styleFrom(
+        //         backgroundColor: Colors.green,
+        //         foregroundColor: Colors.white,
+        //         textStyle: const TextStyle(fontWeight: FontWeight.bold),
+        //       ),
+        //       child: const Text("Reconnect"),
+        //     )
+        //   : ElevatedButton(
+        //       onPressed: _handleConnect,
+        //       child: const Text("Connect"),
+        //     ),
       ),
     );
   }

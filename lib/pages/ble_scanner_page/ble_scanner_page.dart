@@ -7,6 +7,21 @@ import './ble_device_tile.dart';
 import '../../services/ble_service.dart';
 import 'package:get_it/get_it.dart';
 
+
+class CustomBleDevice {
+  final DiscoveredDevice device;
+  final bool disabled;
+
+  CustomBleDevice({required this.device, this.disabled = false});
+
+  CustomBleDevice copyWith({bool? disabled}) {
+    return CustomBleDevice(
+      device: device,
+      disabled: disabled ?? this.disabled,
+    );
+  }
+}
+
 class BleScannerPage extends StatefulWidget {
   const BleScannerPage({super.key});
   @override
@@ -14,7 +29,7 @@ class BleScannerPage extends StatefulWidget {
 }
 
 class _BleScannerPageState extends State<BleScannerPage> {
-  List<DiscoveredDevice> devices = [];
+  List<CustomBleDevice> devices = [];
   final flutterReactiveBle = FlutterReactiveBle();
   StreamSubscription<DiscoveredDevice>? scanSubscription;
   // final bleService = BleService(flutterReactiveBle);
@@ -92,9 +107,9 @@ class _BleScannerPageState extends State<BleScannerPage> {
         )
         .listen(
           (device) {
-            if (devices.indexWhere((d) => d.id == device.id) == -1) {
+            if (devices.indexWhere((d) => d.device.id == device.id) == -1) {
               setState(() {
-                devices.add(device);
+                devices.add(CustomBleDevice(device: device));
               });
             }
           },
@@ -109,6 +124,17 @@ class _BleScannerPageState extends State<BleScannerPage> {
 
     _scanTimeoutTimer = Timer(const Duration(seconds: 10), () {
       if (mounted) stopScan();
+    });
+  }
+
+  void handleAnyDeviceLoading(String deviceId) {
+    print("recieved $deviceId");
+    _scanTimeoutTimer?.cancel();
+    stopScan();
+    setState(() {
+      devices = devices.map((d) {
+        return d.copyWith(disabled: d.device.id != deviceId);
+      }).toList();
     });
   }
 
@@ -153,8 +179,12 @@ class _BleScannerPageState extends State<BleScannerPage> {
           ListView.builder(
             itemCount: devices.length,
             itemBuilder: (context, index) {
-              final d = devices[index];
-              return BleDeviceTile(device: d);
+              final customDevice = devices[index];
+              return BleDeviceTile(
+                device: customDevice.device,
+                disabled: customDevice.disabled,
+                onLoading: handleAnyDeviceLoading,
+              );
             },
           ),
           if (isScanning)
