@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 class WifiPasswordDialog extends StatefulWidget {
   final String ssid;
+  final ValueNotifier<bool> loadingNotifier;
   final Future<void> Function(String ssid, String password) onSubmit;
 
   const WifiPasswordDialog({
     Key? key,
     required this.ssid,
+    required this.loadingNotifier,
     required this.onSubmit,
   }) : super(key: key);
 
@@ -68,25 +70,32 @@ class _WifiPasswordDialogState extends State<WifiPasswordDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text("Cancel"),
         ),
-        ElevatedButton(
-          onPressed: _loading ? null : _handleSubmit,
-          child: SizedBox(
-            width: 54,
-            child: Center(
-              child: _loading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    )
-                  : const Text("Connect"),
-            ),
-          ),
+        ValueListenableBuilder(
+          valueListenable: widget.loadingNotifier,
+          builder: (context, parentLoading, _) {
+            final isAnyLoading = _loading || parentLoading;
+
+            return ElevatedButton(
+              onPressed: isAnyLoading ? null : _handleSubmit,
+              child: SizedBox(
+                width: 54,
+                child: Center(
+                  child: isAnyLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      : const Text("Connect"),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

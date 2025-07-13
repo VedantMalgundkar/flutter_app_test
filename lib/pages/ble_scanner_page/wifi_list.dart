@@ -27,7 +27,7 @@ class _WifiListWidgetState extends State<WifiListWidget> {
   List<Map<String, dynamic>> wifiList = [];
   String _mac = "";
   bool isLoading = false;
-  bool iswriteLoading = false;
+  final ValueNotifier<bool> iswriteLoading = ValueNotifier(false);
   bool isBleConnFailed = false;
 
   List<Map<String, dynamic>> connectedWifi = [];
@@ -44,38 +44,39 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     super.initState();
     _initialize();
     wifiActionThrottledHandler = throttledWifiAction();
+    // Future.delayed(Duration(seconds: 10), () {
+    //   iswriteLoading.value = false;
+    // });
   }
 
   Future<void> _initialize() async {
     if (widget.isFetchApi) {
-      setState(() {
-        iswriteLoading = true;
-      });
+      // Start async work without awaiting — allows UI to build first
+      Future(() async {
+        iswriteLoading.value = true;
 
-      try {
-        await bleService.connectToDevice(deviceId: widget.deviceId);
-
-        if (mounted) {
-          setState(() {
-            iswriteLoading = false;
+        try {
+          await bleService.connectToDevice(deviceId: widget.deviceId);
+          if (mounted) {
+            iswriteLoading.value = false;
             print("BLE Connected. >>>>");
-          });
-        }
-
-        await _getMacId();
-      } catch (e) {
-        print("BLE connection failed: $e");
-        if (mounted) {
-          setState(() {
-            iswriteLoading = false;
+          }
+          await _getMacId();
+        } catch (e) {
+          print("BLE connection failed: $e");
+          if (mounted) {
+            iswriteLoading.value = false;
             isBleConnFailed = true;
-          });
+          }
         }
-      }
-
-      _hyperhdr = context.read<HttpServiceProvider>().service;
+      });
     } else {
       await _getMacId();
+    }
+
+    // This happens immediately after widget build
+    if (widget.isFetchApi) {
+      _hyperhdr = context.read<HttpServiceProvider>().service;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -135,12 +136,17 @@ class _WifiListWidgetState extends State<WifiListWidget> {
     showDialog(
       context: context,
       builder: (context) {
-        return WifiPasswordDialog(ssid: ssid, onSubmit: handleWifiCredsWrite);
+        return WifiPasswordDialog(
+          ssid: ssid,
+          loadingNotifier: iswriteLoading,
+          onSubmit: handleWifiCredsWrite,
+        );
       },
     );
   }
 
   Future<void> _loadWifiList() async {
+    print("\n <<<<<<<<<<<<<<<<<< called _loadWifiList >>>>>>>>>>>>>>> \n");
     setState(() {
       isLoading = true;
     });
@@ -282,14 +288,20 @@ class _WifiListWidgetState extends State<WifiListWidget> {
             ],
           ),
         ),
-
-        if (_isLoading)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: buildTopLinearLoader(context),
-          ),
+        ValueListenableBuilder(
+          valueListenable: iswriteLoading,
+          builder: (context, listenableLoading, _) {
+            if (_isLoading || listenableLoading) {
+              return Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: buildTopLinearLoader(context),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ],
     );
   }
@@ -369,28 +381,49 @@ class _WifiListWidgetState extends State<WifiListWidget> {
             ),
 
             if (isSaved || isConnected)
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  wifiActionThrottledHandler(ssid, value);
+              ValueListenableBuilder(
+                valueListenable: iswriteLoading,
+                builder: (context, isLoading, _) {
+                  if (isLoading) {
+                    return IconTheme(
+                      data: IconThemeData(
+                        color: Theme.of(context).disabledColor,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(11),
+                        child: const Icon(Icons.more_vert),
+                      ),
+                    );
+                  }
+                  return PopupMenuButton<String>(
+                    onSelected: (value) {
+                      wifiActionThrottledHandler(ssid, value);
+                    },
+                    itemBuilder: (BuildContext context) => [
+                      PopupMenuItem(
+                        value: isConnected ? 'disconnect' : 'connect',
+                        child: Text(isConnected ? 'Disconnect' : 'Connect'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'forget',
+                        child: Text('Forget'),
+                      ),
+                    ],
+                    icon: const Icon(Icons.more_vert),
+                  );
                 },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem(
-                    value: isConnected ? 'disconnect' : 'connect',
-                    child: Text(isConnected ? 'Disconnect' : 'Connect'),
-                  ),
-                  const PopupMenuItem(value: 'forget', child: Text('Forget')),
-                ],
-                icon: const Icon(Icons.more_vert),
               ),
           ],
         ),
       ),
       onTap: () {
-        if (isSaved || !locked) {
-          wifiActionThrottledHandler(ssid, "connect");
+        if (isConnected || ((!locked || isSaved) && iswriteLoading.value)) {
           return;
         }
-        if (!isConnected) {
+
+        if (isSaved || !locked) {
+          wifiActionThrottledHandler(ssid, "connect");
+        } else {
           _showPasswordDialog(ssid);
         }
       },
