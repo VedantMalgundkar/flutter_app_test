@@ -7,17 +7,22 @@ import './ble_device_tile.dart';
 import '../../services/ble_service.dart';
 import 'package:get_it/get_it.dart';
 
-
 class CustomBleDevice {
   final DiscoveredDevice device;
   final bool disabled;
+  final bool isConnected;
 
-  CustomBleDevice({required this.device, this.disabled = false});
+  CustomBleDevice({
+    required this.device,
+    this.disabled = false,
+    this.isConnected = false,
+  });
 
-  CustomBleDevice copyWith({bool? disabled}) {
+  CustomBleDevice copyWith({bool? disabled, bool? isConnected}) {
     return CustomBleDevice(
       device: device,
       disabled: disabled ?? this.disabled,
+      isConnected: isConnected ?? this.isConnected,
     );
   }
 }
@@ -109,7 +114,15 @@ class _BleScannerPageState extends State<BleScannerPage> {
           (device) {
             if (devices.indexWhere((d) => d.device.id == device.id) == -1) {
               setState(() {
-                devices.add(CustomBleDevice(device: device));
+                devices.add(
+                  CustomBleDevice(
+                    device: device,
+                    isConnected: bleService.connectedDeviceId == device.id,
+                    disabled:
+                        bleService.connectedDeviceId != null &&
+                        bleService.connectedDeviceId != device.id,
+                  ),
+                );
               });
             }
           },
@@ -134,6 +147,14 @@ class _BleScannerPageState extends State<BleScannerPage> {
     setState(() {
       devices = devices.map((d) {
         return d.copyWith(disabled: d.device.id != deviceId);
+      }).toList();
+    });
+  }
+
+  void handleAnyDeviceDisconnect() {
+    setState(() {
+      devices = devices.map((d) {
+        return d.copyWith(disabled: false, isConnected: false);
       }).toList();
     });
   }
@@ -184,6 +205,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
                 device: customDevice.device,
                 disabled: customDevice.disabled,
                 onLoading: handleAnyDeviceLoading,
+                onDisconnect: handleAnyDeviceDisconnect,
               );
             },
           ),

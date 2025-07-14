@@ -8,12 +8,14 @@ class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
   final bool disabled;
   final void Function(String deviceId)? onLoading;
+  final void Function()? onDisconnect;
 
   const BleDeviceTile({
     Key? key,
     required this.device,
     required this.disabled,
     this.onLoading,
+    this.onDisconnect,
   }) : super(key: key);
 
   @override
@@ -24,6 +26,8 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
   bool isLoading = false;
   final BleService bleService = GetIt.I<BleService>();
   bool isConnected = false;
+  bool get isGloballyConnected =>
+      widget.device.id == bleService.connectedDeviceId;
 
   Future<void> _handleRedirect() async {
     final ipaddr = await bleService.readIp(deviceId: widget.device.id);
@@ -63,14 +67,23 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
     setState(() => isLoading = true);
 
     try {
+      if (isConnected || bleService.connectedDeviceId == widget.device.id) {
+        await bleService.disconnect();
+
+        if (widget.onDisconnect != null) {
+          widget.onDisconnect!();
+        }
+
+        setState(() {
+          isConnected = false;
+          isLoading = false;
+        });
+
+        return;
+      }
 
       if (widget.onLoading != null) {
         widget.onLoading!(widget.device.id);
-      }
-
-      if(isConnected) {
-        await bleService.disconnect();
-        return;
       }
 
       print("connecting to  ${widget.device.id}");
@@ -83,29 +96,24 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         return;
       }
 
-      
+      setState(() {
+        isConnected = true;
+        isLoading = false;
+      });
       // await _handleRedirect();
     } catch (e) {
       setState(() => isLoading = false);
       print("Error during connection or IP read: $e");
-    } finally {
-      setState(() {
-        isConnected = !isConnected;
-        isLoading = false;
-      });
     }
-     
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = widget.device.id == bleService.connectedDeviceId;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: isSelected ? Colors.green : Colors.transparent,
+          color: isGloballyConnected ? Colors.green : Colors.transparent,
           width: 2,
         ),
         borderRadius: BorderRadius.circular(12),
@@ -137,7 +145,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
                   : Text(
                       widget.disabled
                           ? "disabled"
-                          : (isConnected || isSelected)
+                          : (isConnected || isGloballyConnected)
                           ? "Disconnect"
                           : "Connect",
                     ),
@@ -155,7 +163,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         //       width: 20,
         //       child: CircularProgressIndicator(strokeWidth: 2),
         //     )
-        //   : isConnected || isSelected
+        //   : isConnected || isGloballyConnected
         //   ? ElevatedButton(
         //       onPressed: _handleConnect,
         //       style: ElevatedButton.styleFrom(
