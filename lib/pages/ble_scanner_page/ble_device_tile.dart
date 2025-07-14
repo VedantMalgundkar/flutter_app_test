@@ -7,15 +7,15 @@ import '../wifi_page/wifi_page.dart';
 class BleDeviceTile extends StatefulWidget {
   final DiscoveredDevice device;
   final bool disabled;
-  final void Function(String deviceId)? onLoading;
-  final void Function()? onDisconnect;
+  final void Function(String deviceId) onLoading;
+  final void Function() onDisconnect;
 
   const BleDeviceTile({
     Key? key,
     required this.device,
     required this.disabled,
-    this.onLoading,
-    this.onDisconnect,
+    required this.onLoading,
+    required this.onDisconnect,
   }) : super(key: key);
 
   @override
@@ -69,10 +69,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
     try {
       if (isConnected || bleService.connectedDeviceId == widget.device.id) {
         await bleService.disconnect();
-
-        if (widget.onDisconnect != null) {
-          widget.onDisconnect!();
-        }
+        widget.onDisconnect();
 
         setState(() {
           isConnected = false;
@@ -82,9 +79,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         return;
       }
 
-      if (widget.onLoading != null) {
-        widget.onLoading!(widget.device.id);
-      }
+      widget.onLoading(widget.device.id);
 
       print("connecting to  ${widget.device.id}");
 
@@ -92,8 +87,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
 
       if (!success) {
         setState(() => isLoading = false);
-        print("Failed to connect to device.");
-        return;
+        throw Exception("Failed to connect to device.");
       }
 
       setState(() {
@@ -102,18 +96,30 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       });
       // await _handleRedirect();
     } catch (e) {
+      final errorMessage = (e is Exception)
+          ? e.toString().replaceFirst('Exception: ', '')
+          : "Unknown error";
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
       setState(() => isLoading = false);
-      print("Error during connection or IP read: $e");
+      widget.onDisconnect();
+
+      print("Ble connectiion or disconnection Failed: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAnyConnceted = (isConnected || isGloballyConnected);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: isGloballyConnected ? Colors.green : Colors.transparent,
+          color: isGloballyConnected
+              ? Colors.green.shade200
+              : Colors.transparent,
           width: 2,
         ),
         borderRadius: BorderRadius.circular(12),
@@ -127,31 +133,59 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
           await _handleRedirect();
         },
         trailing: ElevatedButton(
-          onPressed: widget.disabled ? null : _handleConnect,
-          child: SizedBox(
-            width: 54,
-            child: Center(
-              child: isLoading
-                  ? SizedBox(
-                      width: 15,
-                      height: 15,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    )
-                  : Text(
-                      widget.disabled
-                          ? "disabled"
-                          : (isConnected || isGloballyConnected)
-                          ? "Disconnect"
-                          : "Connect",
-                    ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isAnyConnceted
+                ? Colors.red.shade100
+                : Theme.of(context).colorScheme.primary,
+            foregroundColor: isAnyConnceted
+                ? Colors.red.shade700
+                : Theme.of(context).colorScheme.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
             ),
+            minimumSize: const Size(100, 30),
           ),
+          onPressed: widget.disabled ? null : _handleConnect,
+          child: isLoading
+              ? SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                )
+              : Text(isAnyConnceted ? "Disconnect" : "Connect"),
         ),
+
+        // ElevatedButton(
+        //   onPressed: widget.disabled ? null : _handleConnect,
+        //   child: SizedBox(
+        //     width: 54,
+        //     child: Center(
+        //       child: isLoading
+        //           ? SizedBox(
+        //               width: 15,
+        //               height: 15,
+        //               child: CircularProgressIndicator(
+        //                 strokeWidth: 2.5,
+        //                 valueColor: AlwaysStoppedAnimation<Color>(
+        //                   Theme.of(context).colorScheme.primary,
+        //                 ),
+        //               ),
+        //             )
+        //           : Text(
+        //               widget.disabled
+        //                   ? "disabled"
+        //                   : (isConnected || isGloballyConnected)
+        //                   ? "Disconnect"
+        //                   : "Connect",
+        //             ),
+        //     ),
+        //   ),
+        // ),
 
         // widget.disabled ? ElevatedButton(
         //       onPressed: ()=>{},
