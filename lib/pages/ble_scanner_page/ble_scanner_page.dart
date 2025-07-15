@@ -6,26 +6,7 @@ import './ble_device_tile.dart';
 // import '../../services/service_locator.dart';
 import '../../services/ble_service.dart';
 import 'package:get_it/get_it.dart';
-
-class CustomBleDevice {
-  final DiscoveredDevice device;
-  final bool disabled;
-  final bool isConnected;
-
-  CustomBleDevice({
-    required this.device,
-    this.disabled = false,
-    this.isConnected = false,
-  });
-
-  CustomBleDevice copyWith({bool? disabled, bool? isConnected}) {
-    return CustomBleDevice(
-      device: device,
-      disabled: disabled ?? this.disabled,
-      isConnected: isConnected ?? this.isConnected,
-    );
-  }
-}
+import './device_model.dart';
 
 class BleScannerPage extends StatefulWidget {
   const BleScannerPage({super.key});
@@ -151,6 +132,14 @@ class _BleScannerPageState extends State<BleScannerPage> {
     });
   }
 
+  void handleAnyDeviceConnect(String deviceId) {
+    setState(() {
+      devices = devices.map((d) {
+        return d.copyWith(isConnected: d.device.id == deviceId);
+      }).toList();
+    });
+  }
+
   void handleAnyDeviceDisconnect() {
     setState(() {
       devices = devices.map((d) {
@@ -198,14 +187,20 @@ class _BleScannerPageState extends State<BleScannerPage> {
       body: Stack(
         children: [
           ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80),
             itemCount: devices.length,
             itemBuilder: (context, index) {
+              devices.sort(
+                (a, b) => (b.isConnected ? 1 : 0) - (a.isConnected ? 1 : 0),
+              );
+
               final customDevice = devices[index];
               return BleDeviceTile(
                 device: customDevice.device,
                 disabled: customDevice.disabled,
                 onLoading: handleAnyDeviceLoading,
                 onDisconnect: handleAnyDeviceDisconnect,
+                onConnect: handleAnyDeviceConnect,
               );
             },
           ),

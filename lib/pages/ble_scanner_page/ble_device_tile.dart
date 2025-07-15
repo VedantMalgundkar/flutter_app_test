@@ -9,6 +9,7 @@ class BleDeviceTile extends StatefulWidget {
   final bool disabled;
   final void Function(String deviceId) onLoading;
   final void Function() onDisconnect;
+  final void Function(String deviceId) onConnect;
 
   const BleDeviceTile({
     Key? key,
@@ -16,6 +17,7 @@ class BleDeviceTile extends StatefulWidget {
     required this.disabled,
     required this.onLoading,
     required this.onDisconnect,
+    required this.onConnect,
   }) : super(key: key);
 
   @override
@@ -94,6 +96,8 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
         isConnected = true;
         isLoading = false;
       });
+
+      widget.onConnect(widget.device.id);
       // await _handleRedirect();
     } catch (e) {
       final errorMessage = (e is Exception)
@@ -102,11 +106,23 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      setState(() => isLoading = false);
+      setState(() {
+        isConnected = false;
+        isLoading = false;
+      });
       widget.onDisconnect();
-
       print("Ble connectiion or disconnection Failed: $e");
     }
+  }
+
+  int normalizeRssi(int rssi) {
+    const int min = -100;
+    const int max = -30;
+
+    if (rssi <= min) return 0;
+    if (rssi >= max) return 100;
+
+    return ((rssi - min) * 100 / (max - min)).round();
   }
 
   @override
@@ -114,7 +130,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
     final isAnyConnceted = (isConnected || isGloballyConnected);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(
           color: isGloballyConnected
@@ -126,9 +142,32 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       ),
       child: ListTile(
         title: Text(
-          widget.device.name.isNotEmpty ? widget.device.name : "(No name)",
+          widget.device.name.isNotEmpty ? "${widget.device.name}" : "(No name)",
+          style: TextStyle(fontSize: 15.5),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text("ID: ${widget.device.id}  RSSI: ${widget.device.rssi}"),
+        subtitle: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "${widget.device.id}",
+              style: TextStyle(fontSize: 12),
+            ), // Spacing between icon and text
+            const SizedBox(width: 8),
+            const Icon(Icons.circle, size: 5),
+            const SizedBox(width: 8),
+            Row(
+              children: [
+                const Icon(Icons.bluetooth_audio, size: 12),
+                Text(
+                  "${normalizeRssi(widget.device.rssi)}",
+                  style: TextStyle(fontSize: 12),
+                ), // Spacing between icon and text
+              ],
+            ),
+          ],
+        ),
         onTap: () async {
           await _handleRedirect();
         },
