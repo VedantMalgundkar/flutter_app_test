@@ -11,11 +11,15 @@ class CustomBleDevice {
     this.isConnected = false,
   });
 
-  CustomBleDevice copyWith({bool? disabled, bool? isConnected}) {
+  CustomBleDevice copyWith({
+    DiscoveredDevice? device,
+    bool? isConnected,
+    bool? disabled,
+  }) {
     return CustomBleDevice(
-      device: device,
-      disabled: disabled ?? this.disabled,
+      device: device ?? this.device,
       isConnected: isConnected ?? this.isConnected,
+      disabled: disabled ?? this.disabled,
     );
   }
 }

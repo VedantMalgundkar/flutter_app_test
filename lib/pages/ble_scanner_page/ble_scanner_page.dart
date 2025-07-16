@@ -16,6 +16,7 @@ class BleScannerPage extends StatefulWidget {
 
 class _BleScannerPageState extends State<BleScannerPage> {
   List<CustomBleDevice> devices = [];
+  CustomBleDevice? connectedDevice;
   final flutterReactiveBle = FlutterReactiveBle();
   StreamSubscription<DiscoveredDevice>? scanSubscription;
   // final bleService = BleService(flutterReactiveBle);
@@ -94,17 +95,27 @@ class _BleScannerPageState extends State<BleScannerPage> {
         .listen(
           (device) {
             if (devices.indexWhere((d) => d.device.id == device.id) == -1) {
-              setState(() {
-                devices.add(
-                  CustomBleDevice(
-                    device: device,
-                    isConnected: bleService.connectedDeviceId == device.id,
-                    disabled:
-                        bleService.connectedDeviceId != null &&
-                        bleService.connectedDeviceId != device.id,
-                  ),
-                );
-              });
+              if (bleService.connectedDeviceId != device.id) {
+                setState(() {
+                  devices.add(
+                    CustomBleDevice(
+                      device: device,
+                      isConnected: bleService.connectedDeviceId == device.id,
+                      disabled:
+                          bleService.connectedDeviceId != null &&
+                          bleService.connectedDeviceId != device.id,
+                    ),
+                  );
+                });
+              } else {
+                setState(() {
+                  setState(() {
+                      if (connectedDevice != null) {
+                        connectedDevice = connectedDevice!.copyWith(device: device);
+                      }
+                    });
+                });
+              }
             }
           },
           onError: (err) {
@@ -132,11 +143,32 @@ class _BleScannerPageState extends State<BleScannerPage> {
     });
   }
 
+  // void handleAnyDeviceConnect(String deviceId) {
+  //   setState(() {
+  //     devices = devices.map((d) {
+  //       return d.copyWith(isConnected: d.device.id == deviceId);
+  //     }).toList();
+  //   });
+
+  // }
+
   void handleAnyDeviceConnect(String deviceId) {
     setState(() {
-      devices = devices.map((d) {
-        return d.copyWith(isConnected: d.device.id == deviceId);
-      }).toList();
+      final updated = <CustomBleDevice>[];
+
+      for (var d in devices) {
+        final updatedDevice = d.copyWith(isConnected: d.device.id == deviceId);
+
+        if (!updatedDevice.isConnected) {
+          updated.add(updatedDevice);
+        }
+
+        if (updatedDevice.isConnected) {
+          connectedDevice = updatedDevice;
+        }
+      }
+
+      devices = updated;
     });
   }
 
@@ -145,6 +177,14 @@ class _BleScannerPageState extends State<BleScannerPage> {
       devices = devices.map((d) {
         return d.copyWith(disabled: false, isConnected: false);
       }).toList();
+      
+      if(connectedDevice != null) {
+        devices.insert(
+          0,
+          connectedDevice!.copyWith(disabled: false, isConnected: false),
+        );
+      }
+      connectedDevice = null;
     });
   }
 
@@ -186,23 +226,32 @@ class _BleScannerPageState extends State<BleScannerPage> {
       appBar: AppBar(title: const Text("Add Device to Network")),
       body: Stack(
         children: [
-          ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
-            itemCount: devices.length,
-            itemBuilder: (context, index) {
-              devices.sort(
-                (a, b) => (b.isConnected ? 1 : 0) - (a.isConnected ? 1 : 0),
-              );
-
-              final customDevice = devices[index];
-              return BleDeviceTile(
-                device: customDevice.device,
-                disabled: customDevice.disabled,
-                onLoading: handleAnyDeviceLoading,
-                onDisconnect: handleAnyDeviceDisconnect,
-                onConnect: handleAnyDeviceConnect,
-              );
-            },
+          ListView(
+            padding: const EdgeInsets.only(bottom: 80 ,top: 4.0),
+            children: [
+              if (connectedDevice != null)
+                BleDeviceTile(
+                  key: ValueKey("connected-${connectedDevice!.device.id}"),
+                  device: connectedDevice!.device,
+                  disabled: false,
+                  onLoading: handleAnyDeviceLoading,
+                  onDisconnect: handleAnyDeviceDisconnect,
+                  onConnect: handleAnyDeviceConnect,
+                ),
+              ...devices
+                  .where((d) => !d.isConnected)
+                  .map(
+                    (customDevice) => BleDeviceTile(
+                      key: ValueKey(customDevice.device.id),
+                      device: customDevice.device,
+                      disabled: customDevice.disabled,
+                      onLoading: handleAnyDeviceLoading,
+                      onDisconnect: handleAnyDeviceDisconnect,
+                      onConnect: handleAnyDeviceConnect,
+                    ),
+                  )
+                  .toList(),
+            ],
           ),
           if (isScanning)
             Positioned(

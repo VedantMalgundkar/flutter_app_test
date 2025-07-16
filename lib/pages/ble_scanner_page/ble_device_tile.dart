@@ -98,7 +98,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       });
 
       widget.onConnect(widget.device.id);
-      // await _handleRedirect();
+      await _handleRedirect();
     } catch (e) {
       final errorMessage = (e is Exception)
           ? e.toString().replaceFirst('Exception: ', '')
