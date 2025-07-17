@@ -29,7 +29,14 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
       setState(() {
         isLoading = true;
       });
-      final versions = await _hyperhdr.getAvlVersions();
+      final vers = await _hyperhdr.getAvlVersions();
+
+      final versions = vers.map((version) => {
+        ...version,
+        'isInstalling': false,
+        'isDisabled': false,
+      }).toList();
+      
       if (!mounted) return;
       setState(() {
         versionList = versions;

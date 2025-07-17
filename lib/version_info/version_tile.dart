@@ -20,6 +20,7 @@ class VersionTile extends StatefulWidget {
 class _VersionTileState extends State<VersionTile> {
   late final HttpService _hyperhdr;
   bool isInstalling = false;
+  bool globallyInstalled = false;
 
   @override
   void initState() {
@@ -27,34 +28,65 @@ class _VersionTileState extends State<VersionTile> {
     _hyperhdr = context.read<HttpServiceProvider>().service;
   }
 
+  // Future<void> _handleInstall(String url) async {
+  //   try {
+  //     setState(() {
+  //       isInstalling = true;
+  //     });
+
+  //     final response = await _hyperhdr.install(url);
+
+  //     if (!mounted) return;
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(response?["message"] ?? "Installation successful"),
+  //       ),
+  //     );
+  //     widget.onInstallationComplete();
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         isInstalling = false;
+  //       });
+  //     }
+  //   }
+  // }
+  
   Future<void> _handleInstall(String url) async {
     try {
       setState(() {
-        isInstalling = true;
+        globallyInstalled = !globallyInstalled;
       });
 
-      final response = await _hyperhdr.install(url);
+      // final response = await _hyperhdr.install(url);
 
-      if (!mounted) return;
+      // if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response?["message"] ?? "Installation successful"),
-        ),
-      );
-      widget.onInstallationComplete();
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(response?["message"] ?? "Installation successful"),
+      //   ),
+      // );
+      // widget.onInstallationComplete();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-    } finally {
-      if (mounted) {
-        setState(() {
-          isInstalling = false;
-        });
-      }
-    }
+    } 
+    // finally {
+    //   if (mounted) {
+    //     setState(() {
+    //       isInstalling = false;
+    //     });
+    //   }
+    // }
   }
 
   @override
@@ -66,34 +98,63 @@ class _VersionTileState extends State<VersionTile> {
     final downloadUrl = version["assets"]?[0]?["browser_download_url"];
 
     return ListTile(
-      title: Text(assetName),
-      subtitle: Text(versionName),
-      trailing: SizedBox(
-        width: 100,
-        height: 36,
-        child: ElevatedButton(
-          onPressed: (isInstalling || isAlreadyInstalled)
-              ? null
-              : () => _handleInstall(downloadUrl),
+      title: Text(
+          assetName,
+          style: TextStyle(fontSize: 15.5),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      subtitle: Text(versionName,style: TextStyle(fontSize: 12)),
+      trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: globallyInstalled ? Theme.of(context).colorScheme.primary : null,
+            foregroundColor: globallyInstalled ? Theme.of(context).colorScheme.onPrimary : null,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            minimumSize: const Size(100, 30),
+          ),
+          onPressed: (isInstalling || isAlreadyInstalled) ? null : () => _handleInstall(downloadUrl),
           child: isInstalling
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
+              ? SizedBox(
+                  width: 15,
+                  height: 15,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
                 )
-              : FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    isAlreadyInstalled ? "Installed" : "Install",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              : Text(globallyInstalled ? "Installed" : "Install"),
         ),
-      ),
+
+      // trailing: SizedBox(
+      //   width: 100,
+      //   height: 36,
+      //   child: ElevatedButton(
+      //     onPressed: (isInstalling || isAlreadyInstalled)
+      //         ? null
+      //         : () => _handleInstall(downloadUrl),
+      //     child: isInstalling
+      //         ? const SizedBox(
+      //             width: 16,
+      //             height: 16,
+      //             child: CircularProgressIndicator(
+      //               strokeWidth: 2,
+      //               color: Colors.white,
+      //             ),
+      //           )
+      //         : FittedBox(
+      //             fit: BoxFit.scaleDown,
+      //             child: Text(
+      //               isAlreadyInstalled ? "Installed" : "Install",
+      //               maxLines: 1,
+      //               overflow: TextOverflow.ellipsis,
+      //             ),
+      //           ),
+      //   ),
+      // ),
     );
   }
 }
