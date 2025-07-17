@@ -32,10 +32,10 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       widget.device.id == bleService.connectedDeviceId;
 
   Future<void> _handleRedirect() async {
-    final ipaddr = await bleService.readIp(deviceId: widget.device.id);
-    print("ip is >>>>>>> $ipaddr");
+    // final ipaddr = await bleService.readIp(deviceId: widget.device.id);
+    // print("ip is >>>>>>> $ipaddr");
 
-    final bool hasValidIp = ipaddr != null && ipaddr.trim().isNotEmpty;
+    // final bool hasValidIp = ipaddr != null && ipaddr.trim().isNotEmpty;
 
     final nextPage = WifiPage(deviceId: widget.device.id, isFetchApi: false);
 

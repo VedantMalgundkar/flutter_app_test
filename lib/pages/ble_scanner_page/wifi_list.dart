@@ -70,8 +70,26 @@ class _WifiListWidgetState extends State<WifiListWidget> {
           }
         }
       });
-    } else {
-      await _getMacId();
+    } 
+    else {
+      Future(() async {
+        iswriteLoading.value = true;
+
+        try {
+          await _getMacId();  
+          if (mounted) {
+            iswriteLoading.value = false;
+            print("fetched macId. >>>>");
+          }
+        } catch (e) {
+          print("MacId Fetching failed: $e");
+          if (mounted) {
+            iswriteLoading.value = false;
+            isBleConnFailed = true;
+          }
+        }
+      });
+      
     }
 
     // This happens immediately after widget build
@@ -85,15 +103,8 @@ class _WifiListWidgetState extends State<WifiListWidget> {
   }
 
   Future<void> _getMacId() async {
-    try {
-      final mac = await bleService.readMac();
-      print("BLE MAC RESULT >>>>>>>> $mac");
-      _mac = mac.toUpperCase();
-      print("mac :>>> $_mac");
-    } catch (e) {
-      debugPrint("Failed to fetch mac id: $e");
-      _mac = "";
-    }
+    final mac = await bleService.readMac();
+    _mac = mac.toUpperCase();
   }
 
   Future<void> handleWifiCredsWrite(String ssid, String password) async {
