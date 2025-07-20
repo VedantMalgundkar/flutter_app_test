@@ -33,7 +33,6 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
 
       final versions = vers.map((version) => {
         ...version,
-        'isInstalling': false,
         'isDisabled': false,
       }).toList();
       
@@ -52,6 +51,22 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
       });
     }
   }
+
+  void handleVersionInstalling(versionId) {
+    setState(() {
+      final versions = versionList.map((version) {
+        final id = version['id'];
+        return {
+          ...version,
+          'is_installed': false,
+          'isDisabled': id.toString() != versionId.toString(),
+        };
+      }).toList();
+
+      versionList = versions;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +87,7 @@ class _VersionInfoPageState extends State<VersionInfoPage> {
             return VersionTile(
               version: version,
               onInstallationComplete: _loadVersionList,
+              onInstalling: handleVersionInstalling,
             );
           },
         ),
