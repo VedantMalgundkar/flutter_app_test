@@ -32,7 +32,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
       widget.device.id == bleService.connectedDeviceId;
 
   Future<void> _handleRedirect() async {
-    if(!isGloballyConnected) {
+    if (!isGloballyConnected) {
       return;
     }
     // final ipaddr = await bleService.readIp(deviceId: widget.device.id);
@@ -187,7 +187,7 @@ class _BleDeviceTileState extends State<BleDeviceTile> {
             ),
             minimumSize: const Size(100, 30),
           ),
-          onPressed: widget.disabled ? null : _handleConnect,
+          onPressed: (widget.disabled || isLoading) ? null : _handleConnect,
           child: isLoading
               ? SizedBox(
                   width: 15,
