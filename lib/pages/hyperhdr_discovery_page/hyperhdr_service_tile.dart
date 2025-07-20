@@ -93,35 +93,43 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: ListTile(
-        title: Row(
-          children: [
-            isEditing
-                ? Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      autofocus: true,
-                      onSubmitted: (_) => _saveName(),
-                    ),
-                  )
-                : Expanded(child: Text(_controller.text)),
-            if (shouldEditVisible)
-              IconButton(
-                icon: Icon(isEditing ? Icons.check : Icons.edit),
-                onPressed: () {
-                  if (isEditing) {
-                    _saveName();
-                  } else {
-                    setState(() => isEditing = true);
-                  }
-                },
+        title: isEditing
+            ? TextField(
+                controller: _controller,
+                autofocus: true,
+                onSubmitted: (_) => _saveName(),
+              )
+            : Text(
+                _controller.text,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-          ],
-        ),
         trailing: isSelected
-            ? Icon(
-                Icons.check,
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
+            ? SizedBox(
+                width: 96,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: Icon(isEditing ? Icons.check : Icons.edit),
+                      onPressed: () {
+                        if (isEditing) {
+                          _saveName();
+                        } else {
+                          setState(() => isEditing = true);
+                        }
+                      },
+                    ),
+                    if (isEditing)
+                      IconButton(
+                        icon: Icon(Icons.cancel),
+                        onPressed: () {
+                          setState(() => isEditing = false);
+                        },
+                      ),
+                  ],
+                ),
               )
             : ElevatedButton(
                 style: ElevatedButton.styleFrom(
