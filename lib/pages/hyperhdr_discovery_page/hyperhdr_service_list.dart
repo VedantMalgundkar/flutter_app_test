@@ -26,7 +26,7 @@ class _HyperhdrServiceListState extends State<HyperhdrServiceList> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshKey.currentState?.show();
-      _refresh();
+      // _refresh();
     });
   }
 
