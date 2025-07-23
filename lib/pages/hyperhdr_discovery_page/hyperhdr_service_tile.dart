@@ -89,8 +89,17 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
     return Stack(
       children: [
         Container(
-          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 3.0),
           decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: !isSelected
+                    ? Colors.black.withOpacity(0.25)
+                    : Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                offset: Offset(0, 1), // x, y
+                blurRadius: 1,
+              ),
+            ],
             border: isSelected
                 ? Border.all(
                     color: Theme.of(context).colorScheme.primary,
