@@ -86,64 +86,96 @@ class _HyperhdrServiceTileState extends State<HyperhdrServiceTile> {
   Widget build(BuildContext context) {
     final isSelected = widget.globalUri == widget.device["url"];
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      decoration: BoxDecoration(
-        color: const Color(0xfffffbff),
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: ListTile(
-        title: isEditing
-            ? TextField(
-                controller: _controller,
-                autofocus: true,
-                onSubmitted: (_) => _saveName(),
-              )
-            : Text(
-                _controller.text,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-        trailing: isSelected
-            ? SizedBox(
-                width: 96,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: Icon(isEditing ? Icons.check : Icons.edit),
-                      onPressed: () {
-                        if (isEditing) {
-                          _saveName();
-                        } else {
-                          setState(() => isEditing = true);
-                        }
-                      },
-                    ),
-                    if (isEditing)
-                      IconButton(
-                        icon: Icon(Icons.cancel),
-                        onPressed: () {
-                          setState(() => isEditing = false);
-                        },
-                      ),
-                  ],
-                ),
-              )
-            : ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          decoration: BoxDecoration(
+            border: isSelected
+                ? Border.all(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1,
+                  )
+                : null,
+            color: const Color(0xfffffbff),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.only(left: 15, right: 8),
+            title: isEditing
+                ? TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    onSubmitted: (_) => _saveName(),
+                  )
+                : Text(
+                    _controller.text,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  minimumSize: const Size(100, 30),
-                ),
-                child: const Text("Connect"),
-                onPressed: () => widget.onSelect?.call(widget.device),
+            trailing: isSelected
+                ? SizedBox(
+                    width: 96,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          icon: Icon(isEditing ? Icons.check : Icons.edit),
+                          onPressed: () {
+                            if (isEditing) {
+                              _saveName();
+                            } else {
+                              setState(() => isEditing = true);
+                            }
+                          },
+                        ),
+                        if (isEditing)
+                          IconButton(
+                            icon: Icon(Icons.cancel),
+                            onPressed: () {
+                              setState(() => isEditing = false);
+                            },
+                          ),
+                      ],
+                    ),
+                  )
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      minimumSize: const Size(100, 30),
+                    ),
+                    child: const Text("Connect"),
+                    onPressed: () => widget.onSelect?.call(widget.device),
+                  ),
+          ),
+        ),
+
+        if (isSelected)
+          Positioned(
+            top: 0,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(6),
               ),
-      ),
+              child: const Text(
+                "Connected",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
