@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../control_modal/control_modal_toggle.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../../services/http_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
@@ -9,6 +7,8 @@ import '../../pages/hyperhdr_discovery_page/hyperhdr_service_list.dart';
 import '../../services/ble_service.dart';
 import 'package:get_it/get_it.dart';
 import '../wifi_page/wifi_page.dart';
+import '../hyperHDR_web_view/hyperhdr_web_view_page.dart';
+import './led_control_dashBoard.dart';
 
 class ControlPage extends StatefulWidget {
   const ControlPage({super.key});
@@ -89,13 +89,45 @@ class _ControlPageState extends State<ControlPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "HyperHDR Control",
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600, // Optional
+      drawer: Builder(
+        builder: (context) => SizedBox(
+          width: MediaQuery.of(context).size.width * 0.65, // 50% width
+          child: Drawer(
+            child: ListView(
+              children: [
+                DrawerHeader(child: Text('Header')),
+                ListTile(
+                  leading: Icon(Icons.settings, color: Colors.grey[500]),
+                  title: Text('Configuration', style: TextStyle(fontSize: 14)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            WebViewContainer(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+      appBar: AppBar(
+        titleSpacing: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+            color: Colors.black,
+          ),
+        ),
+        title: const Text(
+          "LED Control",
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.blue,
         actions: [
@@ -157,7 +189,8 @@ class _ControlPageState extends State<ControlPage> {
       ),
       body: Stack(
         children: [
-          Positioned.fill(child: WebViewContainer()),
+          Positioned.fill(child: LightControlWidget()),
+          
           // BACKDROP to dismiss drawer
           if (_isChangeDeviceDrawerOpen || _isControlModalOpen)
             Positioned.fill(
@@ -173,7 +206,7 @@ class _ControlPageState extends State<ControlPage> {
                 ),
               ),
             ),
-
+          // arrow down
           Positioned(
             top: -8,
             left: 0,
@@ -278,137 +311,6 @@ class _ControlPageState extends State<ControlPage> {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class WebViewContainer extends StatefulWidget {
-  const WebViewContainer({super.key});
-
-  @override
-  State<WebViewContainer> createState() => _WebViewContainerState();
-}
-
-class _WebViewContainerState extends State<WebViewContainer> {
-  WebViewController? _controller;
-  bool _hasError = false;
-  bool _isDesktopMode = false;
-
-  Future<void> _setupWebView(Uri uri) async {
-    try {
-      late final WebViewController controller;
-
-      controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.transparent)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageStarted: (_) => setState(() => _hasError = false),
-            onPageFinished: (_) => _injectViewport(controller),
-            onWebResourceError: (_) => setState(() => _hasError = true),
-          ),
-        );
-
-      if (controller.platform is AndroidWebViewController) {
-        final android = controller.platform as AndroidWebViewController;
-        await android.setMediaPlaybackRequiresUserGesture(false);
-      }
-
-      await controller.loadRequest(uri);
-
-      setState(() => _controller = controller);
-    } catch (e) {
-      debugPrint("WebView setup error: $e");
-      setState(() => _hasError = true);
-    }
-  }
-
-  void _injectViewport(WebViewController controller) {
-    final content = _isDesktopMode
-        ? 'width=1024' // Desktop-like width
-        : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-
-    controller.runJavaScript('''
-    (() => {
-      var meta = document.querySelector('meta[name="viewport"]');
-      if (meta) {
-        meta.setAttribute('content', '$content');
-      } else {
-        meta = document.createElement('meta');
-        meta.name = "viewport";
-        meta.content = "$content";
-        document.head.appendChild(meta);
-      }
-    })();
-  ''');
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final hyperUri = context.watch<HttpServiceProvider>().hyperUri;
-    if (hyperUri != null) {
-      _setupWebView(hyperUri);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hyperUri = context.watch<HttpServiceProvider>().hyperUri;
-
-    if (_hasError) {
-      return _buildError();
-    }
-
-    if (_controller == null || hyperUri == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Stack(
-      children: [
-        WebViewWidget(controller: _controller!),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            onPressed: () {
-              setState(() => _isDesktopMode = !_isDesktopMode);
-              _injectViewport(_controller!);
-            },
-            child: Icon(
-              _isDesktopMode ? Icons.phone_android : Icons.desktop_windows,
-            ),
-            tooltip: _isDesktopMode
-                ? 'Switch to Phone Mode'
-                : 'Switch to Desktop Mode',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildError() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Failed to load WebView'),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              final uri = context.read<HttpServiceProvider>().hyperUri;
-              if (uri != null) _setupWebView(uri);
-            },
-            child: const Text('Retry'),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Ensure:\n1. Server is running\n2. Correct IP address\n3. Same network',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12),
           ),
         ],
       ),
