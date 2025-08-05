@@ -114,7 +114,7 @@ class HttpService {
   Future<Map<String, dynamic>?> getMac() async {
     return await _request('/get-mac', 'GET');
   }
-
+  
   Future<Map<String, dynamic>?> install(String url) async {
     print("base url ${this.baseUrl}");
     final res = await _request(
@@ -124,4 +124,15 @@ class HttpService {
     );
     return res;
   }
+
+  Future<Map<String, dynamic>?> getLedBrightness() async {
+    return await _request('/led/get-brightness', 'GET');
+  }
+  
+  Future<Map<String, dynamic>?> adjustLedBrightness(int brightness) async {
+    return await _request('/led/adjust-brightness', 'POST', body : {
+      'brightness': brightness,
+    });
+  }
+
 }
