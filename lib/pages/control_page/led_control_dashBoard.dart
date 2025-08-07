@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import '../../services/http_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/http_service_provider.dart';
@@ -35,7 +35,7 @@ class _LightControlWidgetState extends State<LightControlWidget> {
       print("error in fetchLedBrightness: $error");
     }
   }
-  
+
   Future<void> handleBrightnessChange(brightness) async {
     try {
       final res = await _hyperhdr.adjustLedBrightness(brightness);
@@ -48,42 +48,64 @@ class _LightControlWidgetState extends State<LightControlWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(22.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Slider(
-            value: _brightness,
-            activeColor: Theme.of(context).primaryColor, // Main theme color
-            inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3), 
-            onChanged: (value) {
-              setState(() => _brightness = value);
-              handleBrightnessChange((value * 100).round());
-            },
-            min: 0,
-            max: 1,
-          ),      
-
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.yellow,
+            Container(
+              // decoration: BoxDecoration(color: Colors.yellow),
+              child: Slider(
+                value: _brightness,
+                activeColor: Theme.of(context).primaryColor, // Main theme color
+                inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                onChanged: (value) {
+                  setState(() => _brightness = value);
+                  handleBrightnessChange(value);
+                },
+                min: 0,
+                max: 100,
+              ),
             ),
-            padding: EdgeInsets.symmetric(horizontal: 30.0),
+          
+          SizedBox(height: 8.0),
+          
+          Container(
+            // decoration: BoxDecoration(color: Colors.yellow),
             child: ColorPicker(
-            pickerColor: _selectedColor,
-            onColorChanged: (color) {
-              setState(() => _selectedColor = color);
-              print("RGB: (${color.red}, ${color.green}, ${color.blue})");
-            },
-            paletteType: PaletteType.hueWheel,
-            enableAlpha: true,
-            labelTypes: const [ColorLabelType.rgb],
-            showLabel: false,
-          ),
+              color: _selectedColor,
+              onColorChanged: (Color color) {
+                setState(() => _selectedColor = color);
+                print(
+                  "Selected RGB: (${color.red}, ${color.green}, ${color.blue})",
+                );
+              },
+              wheelDiameter: 250,
+              padding : const EdgeInsets.all(0.0),
+              columnSpacing: 0,
+              pickersEnabled: <ColorPickerType, bool>{
+                ColorPickerType.wheel: true, // ✅ Show only the wheel
+                ColorPickerType.both: false,
+                ColorPickerType.primary: false,
+                ColorPickerType.accent: false,
+                ColorPickerType.bw: false,
+                ColorPickerType.custom: false,
+              },
+              wheelWidth: 20, // Adjust size if needed
+              enableShadesSelection: false, // ❌ No shades
+              showColorName: false, // ❌ No name
+              showColorCode: false, // ❌ No hex or RGB
+              showMaterialName: false,
+              showColorValue: false,
+              actionButtons: const ColorPickerActionButtons(
+                dialogActionButtons: false, // ❌ No "OK" or "Cancel"
+              ),
+            ),
           ),
           IconButton(
             onPressed: fetchLedBrightness,
             icon: Icon(Icons.ac_unit_outlined),
-          )
+          ),
         ],
       ),
     );
