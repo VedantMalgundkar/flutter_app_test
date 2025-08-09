@@ -133,6 +133,14 @@ class HttpService {
     return await _request('/led/get-effects', 'GET');
   }
   
+  Future<Map<String, dynamic>?> getCurrentActiveInput() async {
+    return await _request('/led/get-active-signal', 'GET');
+  }
+  
+  Future<Map<String, dynamic>?> applyEffect(String effect) async {
+    return await _request('/led/apply-effect', 'GET', body: {'effect': effect.trim() });
+  }
+  
   Future<Map<String, dynamic>?> adjustLedBrightness(int brightness) async {
     return await _request('/led/adjust-brightness', 'POST', body : {
       'brightness': brightness,

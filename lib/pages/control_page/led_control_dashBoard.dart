@@ -15,6 +15,8 @@ class LightControlWidget extends StatefulWidget {
 class _LightControlWidgetState extends State<LightControlWidget> {
   double _brightness = 0.0;
   Color _selectedColor = Colors.blue;
+  Map<String, dynamic> currentRunningInput = {};
+
   late final HttpService _hyperhdr;
   List<Map<String, String>> effectList = [];
 
@@ -51,10 +53,37 @@ class _LightControlWidgetState extends State<LightControlWidget> {
           };
         }).toList();
       });
+      getCurrentInput();
     } catch (error) {
       print("error in fetchLedEffects: $error");
     }
   }
+  
+  Future<void> getCurrentInput() async {
+    try {
+      final res = await _hyperhdr.getCurrentActiveInput();
+      print("getCurrentInput >>>>$res");
+      setState(() {
+        currentRunningInput = res?['data'];
+      });
+    } catch (error) {
+      print("error in getCurrentInput: $error");
+    }
+  }
+  
+  Future<void> handleEffectTileTap(String effect) async {
+    try {
+      print("handleEffectTileTap $effect");
+      // final res = await _hyperhdr.applyEffect(effect);
+      // setState(() {
+      //   currentRunningInput = res?['data'];
+      // });
+    } catch (error) {
+      print("error in handleEffectTileTap: $error");
+    }
+  }
+
+
 
   Future<void> handleBrightnessChange(double brightness) async {
     _brightnessDebouncer?.cancel();
@@ -171,15 +200,21 @@ class _LightControlWidgetState extends State<LightControlWidget> {
 
           // Effects List
           ListView.builder(
-            shrinkWrap: true, // ✅ let it size itself inside scroll
-            physics: const NeverScrollableScrollPhysics(), // ✅ disable inner scroll
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: effectList.length,
             itemBuilder: (context, index) {
-              final item = effectList[index];
+              final effect = effectList[index];
+              final effectName = effect['name']!;
+              bool isEffectActive = currentRunningInput?['value'] == effectName;
+
                 return ListTile(
-                  title: Text(item['name']!),
+                  textColor: isEffectActive? Colors.green : Colors.black,
+                  title: Text(effectName),
                   onTap: () {
-                    print('Tapped on ${item['name']}');
+                    print('Tapped on $effectName');
+
+                    handleEffectTileTap(effectName);
                   },
                 );
             },
