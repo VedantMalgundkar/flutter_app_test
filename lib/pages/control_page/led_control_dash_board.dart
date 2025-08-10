@@ -55,6 +55,7 @@ class _LightControlWidgetState extends State<LightControlWidget> {
           return {'name': item['name']?.toString() ?? ''};
         }).toList();
       });
+
       getCurrentInput();
     } catch (error) {
       print("error in fetchLedEffects: $error");
@@ -64,9 +65,20 @@ class _LightControlWidgetState extends State<LightControlWidget> {
   Future<void> getCurrentInput() async {
     try {
       final res = await _hyperhdr.getCurrentActiveInput();
-      print("getCurrentInput >>>>$res");
       setState(() {
         currentRunningInput = res?['data'];
+
+        if (res?['data']['value'] is Map) {
+          final color = res?['data']['value']['RGB'];
+          _selectedColor = _selectedColor = Color.fromRGBO(
+            color[0],
+            color[1],
+            color[2],
+            1.0,
+          );
+        } else {
+          _selectedColor = Colors.black;
+        }
       });
     } catch (error) {
       print("error in getCurrentInput: $error");
@@ -75,20 +87,15 @@ class _LightControlWidgetState extends State<LightControlWidget> {
 
   Future<void> handleEffectTileTap(String effect) async {
     try {
-      if (currentRunningInput?['value'] != null
-          && currentRunningInput?['value'] is String
-          && effect == currentRunningInput?['value']) {
+      if (currentRunningInput['value'] != null &&
+          currentRunningInput['value'] is String &&
+          effect == currentRunningInput['value']) {
         await _hyperhdr.stopEffect(100);
       } else {
         await _hyperhdr.applyEffect(effect);
       }
 
-      final currRes = await _hyperhdr.getCurrentActiveInput();
-
-      setState(() {
-        currentRunningInput = currRes?['data'] ?? {};
-
-      });
+      await getCurrentInput();
     } catch (error) {
       print("error in handleEffectTileTap: $error");
     }
@@ -99,27 +106,22 @@ class _LightControlWidgetState extends State<LightControlWidget> {
     bool isToggle = true,
   }) async {
 
-    // print("currentRunningInput >> ${currentRunningInput?['value']} || ${currentRunningInput?['value'] is String} || ${currentRunningInput?['value'] is Map}");
+    final isItEffect = currentRunningInput['value'] is String;
 
-    final isItEffect = currentRunningInput?['value'] is String;
-
-    final isItSameColor = currentRunningInput?['value'] is Map && listEquals(color, currentRunningInput?['value']?['RGB']);
+    final isItSameColor =
+        currentRunningInput['value'] is Map &&
+        listEquals(color, currentRunningInput['value']?['RGB']);
 
     try {
       if (isToggle && (isItEffect || isItSameColor)) {
         await _hyperhdr.stopEffect(100);
-        setState(() => _selectedColor = const Color(0x00000000));
-      } 
-      
-      if(!isItSameColor) {
+      }
+
+      if (!isItSameColor) {
         await _hyperhdr.applyColor(color);
       }
 
-      final currRes = await _hyperhdr.getCurrentActiveInput();
-
-      setState(() {
-        currentRunningInput = currRes?['data'] ?? {};
-      });
+      await getCurrentInput();
     } catch (error) {
       print("error in handleColorChange: $error");
     }
@@ -129,11 +131,9 @@ class _LightControlWidgetState extends State<LightControlWidget> {
     List<int> color, {
     bool isToggle = true,
   }) async {
-
-    print("handleColorChangeDebounced >>> $color");
     _colorchangeDebouncer?.cancel();
 
-    _colorchangeDebouncer = Timer(const Duration(milliseconds: 300), () async {
+    _colorchangeDebouncer = Timer(const Duration(milliseconds: 200), () async {
       await handleColorChange(color, isToggle: isToggle);
     });
   }
@@ -143,8 +143,7 @@ class _LightControlWidgetState extends State<LightControlWidget> {
 
     _brightnessDebouncer = Timer(const Duration(milliseconds: 400), () async {
       try {
-        final res = await _hyperhdr.adjustLedBrightness(brightness.toInt());
-        print("handleBrightnessChange $res");
+        await _hyperhdr.adjustLedBrightness(brightness.toInt());
       } catch (error) {
         print("error in handleBrightnessChange: $error");
       }
@@ -285,45 +284,9 @@ class _LightControlWidgetState extends State<LightControlWidget> {
             ),
           ),
 
-          const SizedBox(height: 12.0),
-
-          // Second Color Picker
-          // Container(
-          //   decoration: const BoxDecoration(color: Colors.yellow),
-          //   child: ColorPicker(
-          //     color: _selectedColor,
-          //     onColorChanged: (color) {
-          //       setState(() => _selectedColor = color);
-
-          //       handleColorChangeDebounced(
-          //         [(color.r * 255.0).round(), (color.g * 255.0).round(), (color.b * 255.0).round()],
-          //         isToggle: true,
-          //       );
-          //     },
-          //     wheelDiameter: 250,
-          //     padding: EdgeInsets.zero,
-          //     columnSpacing: 0,
-          //     pickersEnabled: const {
-          //       ColorPickerType.wheel: false,
-          //       ColorPickerType.primary: true,
-          //       ColorPickerType.both: false,
-          //       ColorPickerType.accent: false,
-          //       ColorPickerType.bw: false,
-          //       ColorPickerType.custom: false,
-          //     },
-          //     wheelWidth: 20,
-          //     enableShadesSelection: false,
-          //     showColorName: false,
-          //     showColorCode: false,
-          //     showMaterialName: false,
-          //     showColorValue: false,
-          //     actionButtons: const ColorPickerActionButtons(
-          //       dialogActionButtons: false,
-          //     ),
-          //   ),
-          // ),
-          const SizedBox(height: 12.0),
-
+          const SizedBox(height: 20.0),
+         
+          // underline 
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
