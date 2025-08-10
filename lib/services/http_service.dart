@@ -138,7 +138,15 @@ class HttpService {
   }
   
   Future<Map<String, dynamic>?> applyEffect(String effect) async {
-    return await _request('/led/apply-effect', 'GET', body: {'effect': effect.trim() });
+    return await _request('/led/apply-effect', 'POST', body: {'effect': effect.trim() });
+  }
+  
+  Future<Map<String, dynamic>?> applyColor(List<int> colorArray) async {
+    return await _request('/led/apply-color','POST', body: {'color': colorArray });
+  }
+  
+  Future<Map<String, dynamic>?> stopEffect(int priority) async {
+    return await _request('/led/stop-effect', 'POST', body: {'priority': priority });
   }
   
   Future<Map<String, dynamic>?> adjustLedBrightness(int brightness) async {
