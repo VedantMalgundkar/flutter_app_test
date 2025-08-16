@@ -8,7 +8,7 @@ import '../../services/ble_service.dart';
 import 'package:get_it/get_it.dart';
 import '../wifi_page/wifi_page.dart';
 import '../hyperHDR_web_view/hyperhdr_web_view_page.dart';
-import './led_control_dashBoard.dart';
+import 'led_control_dash_board.dart';
 
 class ControlPage extends StatefulWidget {
   const ControlPage({super.key});
